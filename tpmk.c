@@ -12,8 +12,25 @@
 
 #define L0_VID 0x0F00
 
+unsigned char *gpHardBase = (unsigned char*)ADDR_BASE;
+
 struct resource *gpMyAdda;
 void *gpBase;
+
+void dump_info(void)
+{
+	uint32_t temp;
+	uint32_t vid;
+	unsigned char *gpHardBaseVID = gpHardBase+L0_VID;
+
+	printk(KERN_INFO MODULE_NAME "Checking for VendorId at %p", gpBase+L0_VID);
+	temp = ioread8(gpBase+L0_VID);
+	vid = ioread32(gpBase+L0_VID);
+	printk(KERN_INFO MODULE_NAME "VendorId at %p = %x, %x\n", gpBase+L0_VID, vid, temp);
+	//below crashes as expected
+	//vid = *(uint32_t*)(gpHardBase+L0_VID);
+	//printk(KERN_INFO MODULE_NAME "VendorId at %p = %x\n", gpHardBaseVID, vid);
+}
 
 int init_module(void)
 {
@@ -30,6 +47,7 @@ int init_module(void)
 	} else {
 		printk(KERN_INFO MODULE_NAME "Yo, I remapped %lx to %p\n", ADDR_BASE, gpBase);
 	}
+	dump_info();
 	return 0;
 }
 
