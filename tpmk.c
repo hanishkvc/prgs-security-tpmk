@@ -16,12 +16,20 @@
 #define Lx_DFIFO(l)  (0x0024 | (l << 12))
 #define L0_VID 0x0F00
 
-#define ACCESS_REQUESTUSE 0x02
-#define ACCESS_RELINQUISH 0x20
-#define ACCESS_ACTIVE     0x20
+#define ACCESS_REQUESTUSE	0x02
+#define ACCESS_RELINQUISH	0x20
+#define ACCESS_ACTIVE		0x20
+
+#define STATUS_VALID		0X80
+#define STATUS_READY4CMD	0X40
+#define STATUS_DATAAVAIL	0X10
+#define STATUS_DATAEXPECT	0x08
+#define STATUS_START		0x20
 
 struct resource *gpMyAdda;
 void *gpBase;
+
+int gCurLocality = 0;
 
 void tpm_dump_info(void)
 {
@@ -41,10 +49,14 @@ int tpm_request_locality(int locality)
 	void *tempAddr = gpBase+Lx_ACCESS(locality);
 	volatile int cnt = 0;
 
+	// relinquish the current locality
+	iowrite8(ACCESS_RELINQUISH, gpBase+Lx_ACCESS(gCurLocality));
+	// get access to new locality
 	printk(KERN_INFO MODULE_NAME "Using Access register at %p to request access", tempAddr);
 	iowrite8(ACCESS_REQUESTUSE, gpBase+Lx_ACCESS(locality));
 	do {
 		if (ioread8(gpBase+Lx_ACCESS(locality)) & ACCESS_ACTIVE) {
+			gCurLocality = locality;
 			printk(KERN_INFO MODULE_NAME "Waited cnt = %d to get access to locality %d", cnt, locality);
 			return 0;
 		}
