@@ -33,14 +33,22 @@ void tpm_dump_info(void)
 	printk(KERN_INFO MODULE_NAME "VendorId at %p = %x, %x\n", gpBase+L0_VID, vid, temp);
 }
 
+#define MAXWAITCNT_REQUESTLOCALITY 20
+
 int tpm_request_locality(int locality)
 {
 	void *tempAddr = gpBase+Lx_ACCESS(locality);
+	int cnt = 0;
 
 	printk(KERN_INFO MODULE_NAME "Using Access register at %p to request access", tempAddr);
 	iowrite8(ACCESS_REQUESTUSE, gpBase+Lx_ACCESS(locality));
-	if (ioread8(gpBase+Lx_ACCESS(locality)) & ACCESS_ACTIVE)
-		return 0;
+	do {
+		if (ioread8(gpBase+Lx_ACCESS(locality)) & ACCESS_ACTIVE) {
+			printk(KERN_INFO MODULE_NAME "Waited cnt = %d to get access to locality %d", cnt, locality);
+			return 0;
+		}
+		cnt += 1;
+	}while (cnt < MAXWAITCNT_REQUESTLOCALITY);
 	return -1;
 }
 
