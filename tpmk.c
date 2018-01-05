@@ -4,6 +4,7 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/ioport.h>
+#include <linux/delay.h>
 
 #define MODULE_NAME ":tpmk:"
 
@@ -38,7 +39,7 @@ void tpm_dump_info(void)
 int tpm_request_locality(int locality)
 {
 	void *tempAddr = gpBase+Lx_ACCESS(locality);
-	int cnt = 0;
+	volatile int cnt = 0;
 
 	printk(KERN_INFO MODULE_NAME "Using Access register at %p to request access", tempAddr);
 	iowrite8(ACCESS_REQUESTUSE, gpBase+Lx_ACCESS(locality));
@@ -48,6 +49,7 @@ int tpm_request_locality(int locality)
 			return 0;
 		}
 		cnt += 1;
+		msleep(5);
 	}while (cnt < MAXWAITCNT_REQUESTLOCALITY);
 	return -1;
 }
