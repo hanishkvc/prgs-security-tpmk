@@ -7,14 +7,17 @@
 #include <linux/delay.h>
 
 #define MODULE_NAME ":tpmk:"
+#define MODULE_MY_VERSION "v20180105_2054UTC"
 
 #define ADDR_BASE 0xFED40000L
 #define ADDR_LEN 0x5000
 
-#define Lx_ACCESS(l) (0x0000 | (l << 12))
-#define Lx_STATUS(l) (0x0018 | (l << 12))
-#define Lx_DFIFO(l)  (0x0024 | (l << 12))
-#define L0_VID 0x0F00
+#define Lx_ACCESS(l)		(0x0000 | (l << 12))
+#define Lx_STATUS(l)		(0x0018 | (l << 12))
+#define Lx_BURSTLEN_LSB(l)	(0x0019 | (l << 12))
+#define Lx_BURSTLEN_MSB(l)	(0x001A | (l << 12))
+#define Lx_DFIFO(l)		(0x0024 | (l << 12))
+#define L0_VID			0x0F00
 
 #define ACCESS_REQUESTUSE	0x02
 #define ACCESS_RELINQUISH	0x20
@@ -77,9 +80,37 @@ int tpm_init(void)
 	return 0;
 }
 
+int tpm_send(int locality, uint8_t *buf, int len)
+{
+	int cnt = 0;
+	int burstCnt = 0;
+	int gotStatus = 0;
+
+	if (tpm_request_locality(locality) != 0)
+		return -1;
+	if ((ioread8(gpBase+Lx_STATUS(locality)) & STATUS_READY4CMD) != STATUS_READY4CMD)
+		return -2;
+
+	while(cnt < len) {
+		burstCnt = ioread8(gpBase+Lx_BURSTLEN_LSB(locality)) | (ioread8(gpBase+Lx_BURSTLEN_MSB(locality))<<8);
+		if (burstCnt <= 0) {
+			msleep(1);
+		} else {
+			iowrite8_rep(gpBase+Lx_DFIFO(locality), &buf[cnt], burstCnt);
+			cnt += burstCnt;
+			for(gotStatus = 0; (gotStatus & STATUS_VALID) == 0;)
+				gotStatus = ioread8(gpBase+Lx_STATUS(locality));
+			if ((gotStatus & STATUS_DATAEXPECT) == 0)
+				return -3;
+		}
+	}
+	iowrite8(STATUS_START, gpBase+Lx_STATUS(locality));
+	return len;
+}
+
 int init_module(void)
 {
-	printk(KERN_INFO MODULE_NAME "In init_module\n");
+	printk(KERN_INFO MODULE_NAME MODULE_MY_VERSION " In init_module\n");
 	gpMyAdda = request_mem_region(ADDR_BASE, ADDR_LEN, MODULE_NAME);
 	if (gpMyAdda == NULL) {
 		printk(KERN_ALERT MODULE_NAME "Oops, I didnt get my adda\n");
