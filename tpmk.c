@@ -10,26 +10,49 @@
 #define ADDR_BASE 0xFED40000L
 #define ADDR_LEN 0x5000
 
+#define Lx_ACCESS(l) (0x0000 | (l << 12))
+#define Lx_STATUS(l) (0x0018 | (l << 12))
+#define Lx_DFIFO(l)  (0x0024 | (l << 12))
 #define L0_VID 0x0F00
 
-unsigned char *gpHardBase = (unsigned char*)ADDR_BASE;
+#define ACCESS_REQUESTUSE 0x02
+#define ACCESS_RELINQUISH 0x20
+#define ACCESS_ACTIVE     0x20
 
 struct resource *gpMyAdda;
 void *gpBase;
 
-void dump_info(void)
+void tpm_dump_info(void)
 {
 	uint32_t temp;
 	uint32_t vid;
-	unsigned char *gpHardBaseVID = gpHardBase+L0_VID;
 
 	printk(KERN_INFO MODULE_NAME "Checking for VendorId at %p", gpBase+L0_VID);
 	temp = ioread8(gpBase+L0_VID);
 	vid = ioread32(gpBase+L0_VID);
 	printk(KERN_INFO MODULE_NAME "VendorId at %p = %x, %x\n", gpBase+L0_VID, vid, temp);
-	//below crashes as expected
-	//vid = *(uint32_t*)(gpHardBase+L0_VID);
-	//printk(KERN_INFO MODULE_NAME "VendorId at %p = %x\n", gpHardBaseVID, vid);
+}
+
+int tpm_request_locality(int locality)
+{
+	void *tempAddr = gpBase+Lx_ACCESS(locality);
+
+	printk(KERN_INFO MODULE_NAME "Using Access register at %p to request access", tempAddr);
+	iowrite8(ACCESS_REQUESTUSE, gpBase+Lx_ACCESS(locality));
+	if (ioread8(gpBase+Lx_ACCESS(locality)) & ACCESS_ACTIVE)
+		return 0;
+	return -1;
+}
+
+int tpm_init(void)
+{
+	int i;
+	for (i = 0; i < 5; i++)
+		iowrite8(ACCESS_RELINQUISH, gpBase+Lx_ACCESS(i));
+	if (tpm_request_locality(0) != 0)
+		return -1;
+	tpm_dump_info();
+	return 0;
 }
 
 int init_module(void)
@@ -47,8 +70,7 @@ int init_module(void)
 	} else {
 		printk(KERN_INFO MODULE_NAME "Yo, I remapped %lx to %p\n", ADDR_BASE, gpBase);
 	}
-	dump_info();
-	return 0;
+	return tpm_init();
 }
 
 void cleanup_module(void)
