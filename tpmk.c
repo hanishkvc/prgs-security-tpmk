@@ -47,25 +47,37 @@ void tpm_dump_info(void)
 
 #define MAXWAITCNT_REQUESTLOCALITY 20
 
+int tpm_wait_for(void *addr, int mask, int trueValue, int maxWaitCnt, char *msgPrefix)
+{
+	volatile int waitCnt = 0;
+
+	do {
+		if ((ioread8(addr) & mask) == trueValue) {
+			printk(KERN_INFO MODULE_NAME ":%s: waitCnt = %d to get %p to have 0x%x for mask 0x%x\n", msgPrefix, waitCnt, addr, trueValue, mask); 
+			return 0;
+		}
+		waitCnt += 1;
+		msleep(5);
+	} while (waitCnt < maxWaitCnt);
+	return -1;
+}
+
 int tpm_request_locality(int locality)
 {
 	void *tempAddr = gpBase+Lx_ACCESS(locality);
-	volatile int waitCnt = 0;
 
 	// relinquish the current locality
 	iowrite8(ACCESS_RELINQUISH, gpBase+Lx_ACCESS(gCurLocality));
 	// get access to new locality
 	printk(KERN_INFO MODULE_NAME "Using Access register at %p to request access", tempAddr);
 	iowrite8(ACCESS_REQUESTUSE, gpBase+Lx_ACCESS(locality));
-	do {
-		if (ioread8(gpBase+Lx_ACCESS(locality)) & ACCESS_ACTIVE) {
-			gCurLocality = locality;
-			printk(KERN_INFO MODULE_NAME "waitCnt = %d to get access to locality %d", waitCnt, locality);
-			return 0;
-		}
-		waitCnt += 1;
-		msleep(5);
-	}while (waitCnt < MAXWAITCNT_REQUESTLOCALITY);
+	if (tpm_wait_for(gpBase+Lx_ACCESS(locality), ACCESS_ACTIVE, ACCESS_ACTIVE, MAXWAITCNT_REQUESTLOCALITY, "RequestLocality") == 0) {
+		gCurLocality = locality;
+		printk(KERN_INFO MODULE_NAME "got access to locality %d", locality);
+		return 0;
+	} else {
+		printk(KERN_INFO MODULE_NAME "Failed to get access to locality %d", locality);
+	}
 	return -1;
 }
 
@@ -87,22 +99,16 @@ int tpm_send(int locality, uint8_t *buf, int len)
 	int cnt = 0;
 	int burstCnt = 0;
 	int gotStatus = 0;
-	int waitCnt;
 
 	if (tpm_request_locality(locality) != 0)
 		return -1;
 	// In case the previous command didnt finish properly
 	iowrite8(STATUS_CMDREADY, gpBase+Lx_STATUS(locality));
 	// Verify the TPM is ready
-	waitCnt = 0;
-	do {
-		if ((ioread8(gpBase+Lx_STATUS(locality)) & STATUS_CMDREADY) == STATUS_CMDREADY)
-			break;
-		waitCnt += 1;
-		msleep(5);
-	} while (waitCnt < MAXWAITCNT_FORCMDREADY);
-	if (waitCnt == MAXWAITCNT_FORCMDREADY)
+	if (tpm_wait_for(gpBase+Lx_STATUS(locality), STATUS_CMDREADY, STATUS_CMDREADY, MAXWAITCNT_FORCMDREADY, "CmdReady4Send") != 0) {
+		printk(KERN_ALERT MODULE_NAME "tpm_send:TPM seems to be busy");
 		return -2;
+	}
 
 	while(cnt < len) {
 		burstCnt = ioread8(gpBase+Lx_BURSTLEN_LSB(locality)) | (ioread8(gpBase+Lx_BURSTLEN_MSB(locality))<<8);
