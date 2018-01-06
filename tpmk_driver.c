@@ -147,6 +147,7 @@ int tpm_send(int locality, uint8_t *buf, int len)
 	int cnt = 0;
 	int burstCnt = 0;
 	int gotStatus = 0;
+	int remaining, toWrite;
 
 	if (tpm_request_locality(locality) != 0)
 		return -1;
@@ -163,12 +164,21 @@ int tpm_send(int locality, uint8_t *buf, int len)
 		if (burstCnt <= 0) {
 			msleep(1);
 		} else {
-			iowrite8_rep(gpBase+Lx_DFIFO(locality), &buf[cnt], burstCnt);
-			cnt += burstCnt;
+			remaining = len - cnt;
+			if (burstCnt > remaining)
+				toWrite = remaining;
+			else
+				toWrite = burstCnt;
+			iowrite8_rep(gpBase+Lx_DFIFO(locality), &buf[cnt], toWrite);
+			cnt += toWrite;
 			for(gotStatus = 0; (gotStatus & STATUS_VALID) == 0;)
 				gotStatus = ioread8(gpBase+Lx_STATUS(locality));
-			if ((gotStatus & STATUS_DATAEXPECT) == 0)
-				return -3;
+			if ((gotStatus & STATUS_DATAEXPECT) == 0) {
+				if (cnt < len) {
+					printk(KERN_ALERT MODULE_NAME "tpm_send: TPM outOfSync??? doesnt want remaining data %d", len-cnt);
+					return -3;
+				}
+			}
 		}
 	}
 	iowrite8(STATUS_START, gpBase+Lx_STATUS(locality));
