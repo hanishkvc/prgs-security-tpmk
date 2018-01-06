@@ -32,6 +32,7 @@
 
 struct resource *gpMyAdda;
 void *gpBase;
+void *gpGPIOMemBase, *gpILBBase;
 
 int gCurLocality = 0;
 
@@ -85,6 +86,11 @@ int tpm_request_locality(int locality)
 int sys_init(void)
 {
 	uint32_t gpioIOBase, gpioMemBase, ilbBase;
+	uint32_t lpcc;
+	// AD3, AD2, AD1, FrameB, AD0, ClkOut0, ClkRunB
+	uint32_t lpcPins[10] = { 0x420, 0x430, 0x440, 0x450, 0x460, 0x470, 0x480, 0x0};
+	uint32_t tempLpcPadConf;
+	int i;
 
 	ilbBase = pciconf_read32(0, 31, 0, 0x50);
 	gpioIOBase = pciconf_read32(0, 31, 0, 0x48);
@@ -93,6 +99,29 @@ int sys_init(void)
 	printk(KERN_INFO MODULE_NAME "gpioIOBase=0x%x", gpioIOBase);
 	printk(KERN_INFO MODULE_NAME "gpioMemBase=0x%x", gpioMemBase);
 	printk(KERN_INFO MODULE_NAME "ilbBase=0x%x", ilbBase);
+
+	gpILBBase = ioremap_nocache(ilbBase, 256);
+	if (IS_ERR(gpILBBase)) {
+		printk(KERN_ALERT MODULE_NAME "Oops, I couldnt remap ILBBase %x\n", ilbBase);
+		return 2;
+	} else {
+		printk(KERN_INFO MODULE_NAME "Yo, I remapped %x to %p\n", ilbBase, gpILBBase);
+	}
+	gpGPIOMemBase = ioremap_nocache(gpioMemBase, 256);
+	if (IS_ERR(gpGPIOMemBase)) {
+		printk(KERN_ALERT MODULE_NAME "Oops, I couldnt remap GPIOMemBase %x\n", gpioMemBase);
+		return 2;
+	} else {
+		printk(KERN_INFO MODULE_NAME "Yo, I remapped %x to %p\n", gpioMemBase, gpGPIOMemBase);
+	}
+
+	lpcc = ioread32(gpILBBase+0x84);
+	printk(KERN_INFO MODULE_NAME "LPCC=0x%x", lpcc);
+	for (i = 0; lpcPins[i] != 0x0; i++) {
+		tempLpcPadConf = ioread32(gpGPIOMemBase+lpcPins[i]);
+		printk(KERN_INFO MODULE_NAME "CurPadConf %d:0x%x = 0x%x", i, lpcPins[i], tempLpcPadConf);
+		iowrite32(tempLpcPadConf+0x1, gpGPIOMemBase+lpcPins[i]);
+	}
 
 	return 0;
 }
