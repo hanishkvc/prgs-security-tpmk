@@ -24,7 +24,7 @@
 #define ACCESS_ACTIVE		0x20
 
 #define STATUS_VALID		0X80
-#define STATUS_READY4CMD	0X40
+#define STATUS_CMDREADY		0X40
 #define STATUS_DATAAVAIL	0X10
 #define STATUS_DATAEXPECT	0x08
 #define STATUS_START		0x20
@@ -50,7 +50,7 @@ void tpm_dump_info(void)
 int tpm_request_locality(int locality)
 {
 	void *tempAddr = gpBase+Lx_ACCESS(locality);
-	volatile int cnt = 0;
+	volatile int waitCnt = 0;
 
 	// relinquish the current locality
 	iowrite8(ACCESS_RELINQUISH, gpBase+Lx_ACCESS(gCurLocality));
@@ -60,12 +60,12 @@ int tpm_request_locality(int locality)
 	do {
 		if (ioread8(gpBase+Lx_ACCESS(locality)) & ACCESS_ACTIVE) {
 			gCurLocality = locality;
-			printk(KERN_INFO MODULE_NAME "Waited cnt = %d to get access to locality %d", cnt, locality);
+			printk(KERN_INFO MODULE_NAME "waitCnt = %d to get access to locality %d", waitCnt, locality);
 			return 0;
 		}
-		cnt += 1;
+		waitCnt += 1;
 		msleep(5);
-	}while (cnt < MAXWAITCNT_REQUESTLOCALITY);
+	}while (waitCnt < MAXWAITCNT_REQUESTLOCALITY);
 	return -1;
 }
 
@@ -80,15 +80,28 @@ int tpm_init(void)
 	return 0;
 }
 
+#define MAXWAITCNT_FORCMDREADY 20
+
 int tpm_send(int locality, uint8_t *buf, int len)
 {
 	int cnt = 0;
 	int burstCnt = 0;
 	int gotStatus = 0;
+	int waitCnt;
 
 	if (tpm_request_locality(locality) != 0)
 		return -1;
-	if ((ioread8(gpBase+Lx_STATUS(locality)) & STATUS_READY4CMD) != STATUS_READY4CMD)
+	// In case the previous command didnt finish properly
+	iowrite8(STATUS_CMDREADY, gpBase+Lx_STATUS(locality));
+	// Verify the TPM is ready
+	waitCnt = 0;
+	do {
+		if ((ioread8(gpBase+Lx_STATUS(locality)) & STATUS_CMDREADY) == STATUS_CMDREADY)
+			break;
+		waitCnt += 1;
+		msleep(5);
+	} while (waitCnt < MAXWAITCNT_FORCMDREADY);
+	if (waitCnt == MAXWAITCNT_FORCMDREADY)
 		return -2;
 
 	while(cnt < len) {
