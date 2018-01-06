@@ -99,6 +99,8 @@ int sys_init(void)
 	printk(KERN_INFO MODULE_NAME "gpioIOBase=0x%x", gpioIOBase);
 	printk(KERN_INFO MODULE_NAME "gpioMemBase=0x%x", gpioMemBase);
 	printk(KERN_INFO MODULE_NAME "ilbBase=0x%x", ilbBase);
+	gpioMemBase &= 0xfffff000;
+	ilbBase &= 0xfffff000;
 
 	gpILBBase = ioremap_nocache(ilbBase, 256);
 	if (IS_ERR(gpILBBase)) {
@@ -107,7 +109,7 @@ int sys_init(void)
 	} else {
 		printk(KERN_INFO MODULE_NAME "Yo, I remapped %x to %p\n", ilbBase, gpILBBase);
 	}
-	gpGPIOMemBase = ioremap_nocache(gpioMemBase, 256);
+	gpGPIOMemBase = ioremap_nocache(gpioMemBase, 0x1000);
 	if (IS_ERR(gpGPIOMemBase)) {
 		printk(KERN_ALERT MODULE_NAME "Oops, I couldnt remap GPIOMemBase %x\n", gpioMemBase);
 		return 2;
