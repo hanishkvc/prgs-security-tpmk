@@ -171,7 +171,83 @@ int tpm_send(int locality, uint8_t *buf, int len)
 		}
 	}
 	iowrite8(STATUS_START, gpBase+Lx_STATUS(locality));
+
 	return len;
+}
+
+int tpm_recv_helper(int locality, uint8_t *buf, int len)
+{
+	int cnt = 0;
+	int toRead = 0;
+	int remaining = 0;
+	int burstCnt = 0;
+
+	while(((ioread8(gpBase+Lx_STATUS(locality)) & (STATUS_VALID|STATUS_DATAVAIL)) == (STATUS_VALID|STATUS_DATAAVAIL)) &&
+			(cnt < len)) {
+		burstCnt = ioread8(gpBase+Lx_BURSTLEN_LSB(locality)) | (ioread8(gpBase+Lx_BURSTLEN_MSB(locality))<<8);
+		if (burstCnt <= 0) {
+			msleep(1);
+		} else {
+			remaining = len-cnt;
+			if (remaining > burstCnt)
+				toRead = burstCnt;
+			else
+				toRead = remaining;
+			ioread8_rep(gpBase+Lx_DFIFO(locality), &buf[cnt], toRead);
+			cnt += toRead;
+		}
+	}
+	return cnt;
+}
+
+#define RECV_INITIAL 10
+
+int tpm_recv(int locality, uint8_t *buf, int len)
+{
+	int cnt = 0;
+	int gotStatus = 0;
+	int toRead, totalSize;
+
+	if (len < RECV_INITIAL) {
+		printk(KERN_ALERT MODULE_NAME "tpm_recv: Too short a buffer provided, cant even fit header");
+		return -1;
+	}
+
+	// Verify the TPM is ready with response
+	if (tpm_wait_for(gpBase+Lx_STATUS(locality), STATUS_VALID | STATUS_DATAAVAIL, STATUS_VALID | STATUS_DATAAVAIL, MAXWAITCNT_DATAAVAIL, "DataAvail4Recv") != 0) {
+		printk(KERN_ALERT MODULE_NAME "tpm_recv:TPM seems to be empty or out of sync");
+		return -2;
+	}
+
+	cnt = tpm_recv_helper(locality, buf, RECV_INITIAL);
+	if (cnt < RECV_INITIAL) {
+		printk(KERN_ALERT MODULE_NAME "tpm_recv: Couldnt retrieve even initial header of response");
+		return -3;
+	}
+
+	totalSize = be32p_to_cpu(&buf[2]);
+	if (totalSize > len) {
+		printk(KERN_ALERT MODULE_NAME "tpm_recv: Too short a buffer provided, Need %d provided %d", totalSize, len);
+		return -4;
+	}
+
+	cnt += tpm_recv_helper(locality, &buf[RECV_INITIAL], totalSize-RECV_INITIAL);
+	if (cnt < totalSize) {
+		printk(KERN_ALERT MODULE_NAME "tpm_recv: Couldnt retrieve remaining part of response");
+		return -5;
+	}
+
+	// Verify the TPM has no more response
+	if ((ioread8(gpBase+Lx_STATUS(locality)) & (STATUS_VALID|STATUS_DATAVAIL)) == (STATUS_VALID|STATUS_DATAAVAIL)) {
+		printk(KERN_ALERT MODULE_NAME "tpm_recv:TPM seems to have still more response (than required?)???");
+		return -6;
+	}
+
+	iowrite8(STATUS_CMDREADY, gpBase+Lx_STATUS(locality));
+	if (cnt != totalSize) {
+		printk(KERN_ALERT MODULE_NAME "tpm_recv:NEED TO DEBUG: cnt != totalSize");
+	}
+	return totalSize;
 }
 
 int init_module(void)
