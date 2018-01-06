@@ -5,6 +5,7 @@
 #include <linux/kernel.h>
 #include <linux/ioport.h>
 #include <linux/delay.h>
+#include "pciconf.h"
 
 #define MODULE_NAME ":tpmk:"
 #define MODULE_MY_VERSION "v20180105_2054UTC"
@@ -81,6 +82,21 @@ int tpm_request_locality(int locality)
 	return -1;
 }
 
+int sys_init(void)
+{
+	uint32_t gpioIOBase, gpioMemBase, ilbBase;
+
+	ilbBase = pciconf_read32(0, 31, 0, 0x50);
+	gpioIOBase = pciconf_read32(0, 31, 0, 0x48);
+	gpioMemBase = pciconf_read32(0, 31, 0, 0x4c);
+
+	printk(KERN_INFO MODULE_NAME "gpioIOBase=0x%x", gpioIOBase);
+	printk(KERN_INFO MODULE_NAME "gpioMemBase=0x%x", gpioMemBase);
+	printk(KERN_INFO MODULE_NAME "ilbBase=0x%x", ilbBase);
+
+	return 0;
+}
+
 int tpm_init(void)
 {
 	int i;
@@ -142,6 +158,8 @@ int init_module(void)
 	} else {
 		printk(KERN_INFO MODULE_NAME "Yo, I remapped %lx to %p\n", ADDR_BASE, gpBase);
 	}
+	pciconf_init();
+	sys_init();
 	return tpm_init();
 }
 
