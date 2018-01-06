@@ -9,7 +9,7 @@
 #include "pciconf.h"
 
 #define MODULE_NAME ":tpmk:"
-#define MODULE_MY_VERSION "v20180105_2054UTC"
+#define MODULE_MY_VERSION "v20180107_0203"
 
 #define ADDR_BASE 0xFED40000L
 #define ADDR_LEN 0x5000
@@ -123,7 +123,7 @@ int sys_init(void)
 	for (i = 0; lpcPins[i] != 0x0; i++) {
 		tempLpcPadConf = ioread32(gpGPIOMemBase+lpcPins[i]);
 		printk(KERN_INFO MODULE_NAME "CurPadConf %d:0x%x = 0x%x", i, lpcPins[i], tempLpcPadConf);
-		iowrite32(tempLpcPadConf+0x1, gpGPIOMemBase+lpcPins[i]);
+		iowrite32((tempLpcPadConf & 0xfffffff8)|0x1, gpGPIOMemBase+lpcPins[i]);
 	}
 
 	return 0;
