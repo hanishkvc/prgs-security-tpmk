@@ -5,6 +5,7 @@
 #include <linux/kernel.h>
 #include <linux/ioport.h>
 #include <linux/delay.h>
+#include <asm/byteorder.h>
 #include "pciconf.h"
 
 #define MODULE_NAME ":tpmk:"
@@ -182,7 +183,7 @@ int tpm_recv_helper(int locality, uint8_t *buf, int len)
 	int remaining = 0;
 	int burstCnt = 0;
 
-	while(((ioread8(gpBase+Lx_STATUS(locality)) & (STATUS_VALID|STATUS_DATAVAIL)) == (STATUS_VALID|STATUS_DATAAVAIL)) &&
+	while(((ioread8(gpBase+Lx_STATUS(locality)) & (STATUS_VALID|STATUS_DATAAVAIL)) == (STATUS_VALID|STATUS_DATAAVAIL)) &&
 			(cnt < len)) {
 		burstCnt = ioread8(gpBase+Lx_BURSTLEN_LSB(locality)) | (ioread8(gpBase+Lx_BURSTLEN_MSB(locality))<<8);
 		if (burstCnt <= 0) {
@@ -200,13 +201,13 @@ int tpm_recv_helper(int locality, uint8_t *buf, int len)
 	return cnt;
 }
 
+#define MAXWAITCNT_DATAAVAIL 20
 #define RECV_INITIAL 10
 
 int tpm_recv(int locality, uint8_t *buf, int len)
 {
 	int cnt = 0;
-	int gotStatus = 0;
-	int toRead, totalSize;
+	int totalSize;
 
 	if (len < RECV_INITIAL) {
 		printk(KERN_ALERT MODULE_NAME "tpm_recv: Too short a buffer provided, cant even fit header");
@@ -225,7 +226,7 @@ int tpm_recv(int locality, uint8_t *buf, int len)
 		return -3;
 	}
 
-	totalSize = be32p_to_cpu(&buf[2]);
+	totalSize = be32_to_cpup((const __be32*)&buf[2]);
 	if (totalSize > len) {
 		printk(KERN_ALERT MODULE_NAME "tpm_recv: Too short a buffer provided, Need %d provided %d", totalSize, len);
 		return -4;
@@ -238,7 +239,7 @@ int tpm_recv(int locality, uint8_t *buf, int len)
 	}
 
 	// Verify the TPM has no more response
-	if ((ioread8(gpBase+Lx_STATUS(locality)) & (STATUS_VALID|STATUS_DATAVAIL)) == (STATUS_VALID|STATUS_DATAAVAIL)) {
+	if ((ioread8(gpBase+Lx_STATUS(locality)) & (STATUS_VALID|STATUS_DATAAVAIL)) == (STATUS_VALID|STATUS_DATAAVAIL)) {
 		printk(KERN_ALERT MODULE_NAME "tpm_recv:TPM seems to have still more response (than required?)???");
 		return -6;
 	}
