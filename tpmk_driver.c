@@ -2,6 +2,7 @@
  * HanishKVC, 2018
  */
 #include "tpmk_driver.h"
+#include "tpmk_lib.h"
 
 struct resource *gpMyAdda;
 void *gpBase;
@@ -18,6 +19,8 @@ void tpm_dump_info(void)
 	temp = ioread8(gpBase+L0_VID);
 	vid = ioread32(gpBase+L0_VID);
 	printk(KERN_INFO MODULE_NAME "VendorId at %p = %x, %x\n", gpBase+L0_VID, vid, temp);
+	tpm_startup();
+	tpm_get_capabilities();
 }
 
 int tpm_wait_for(void *addr, int mask, int trueValue, int maxWaitCnt, char *msgPrefix)
@@ -205,6 +208,8 @@ int tpm_recv(int locality, uint8_t *buf, int len)
 	if (totalSize > len) {
 		printk(KERN_ALERT MODULE_NAME "tpm_recv: Too short a buffer provided, Need %d provided %d", totalSize, len);
 		return -4;
+	} else {
+		printk(KERN_INFO MODULE_NAME "tpm_recv: ResponseSize %d, available buffer %d", totalSize, len);
 	}
 
 	cnt += tpm_recv_helper(locality, &buf[RECV_INITIAL], totalSize-RECV_INITIAL);
