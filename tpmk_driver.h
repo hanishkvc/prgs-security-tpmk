@@ -11,7 +11,7 @@
 #include "pciconf.h"
 
 #define MODULE_NAME ":tpmk:"
-#define MODULE_MY_VERSION "v20180107_0203"
+#define MODULE_MY_VERSION "v20180107_0816"
 
 #define ADDR_BASE 0xFED40000L
 #define ADDR_LEN 0x5000

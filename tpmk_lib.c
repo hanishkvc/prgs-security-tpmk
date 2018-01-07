@@ -39,7 +39,7 @@ void tpm_command(int locality, uint8_t *buf, int size, char *msg)
 	tpm_send(locality, buf, size);
 	iGot = tpm_recv(0, gcaTpmResponse, 4096);
 	for(i = 0; i < iGot; i++) {
-		printk("%d=%x, ", i, gcaTpmResponse[i]);
+		printk("%.4d=0x%.2x [%c], ", i, gcaTpmResponse[i], gcaTpmResponse[i]);
 	}
 	printk(KERN_INFO MODULE_NAME "command: done\n");
 
