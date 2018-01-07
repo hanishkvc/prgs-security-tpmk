@@ -1,35 +1,7 @@
 /* TPMK - A minimal tpm driver
  * HanishKVC, 2018
  */
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/ioport.h>
-#include <linux/delay.h>
-#include <asm/byteorder.h>
-#include "pciconf.h"
-
-#define MODULE_NAME ":tpmk:"
-#define MODULE_MY_VERSION "v20180107_0203"
-
-#define ADDR_BASE 0xFED40000L
-#define ADDR_LEN 0x5000
-
-#define Lx_ACCESS(l)		(0x0000 | (l << 12))
-#define Lx_STATUS(l)		(0x0018 | (l << 12))
-#define Lx_BURSTLEN_LSB(l)	(0x0019 | (l << 12))
-#define Lx_BURSTLEN_MSB(l)	(0x001A | (l << 12))
-#define Lx_DFIFO(l)		(0x0024 | (l << 12))
-#define L0_VID			0x0F00
-
-#define ACCESS_REQUESTUSE	0x02
-#define ACCESS_RELINQUISH	0x20
-#define ACCESS_ACTIVE		0x20
-
-#define STATUS_VALID		0X80
-#define STATUS_CMDREADY		0X40
-#define STATUS_DATAAVAIL	0X10
-#define STATUS_DATAEXPECT	0x08
-#define STATUS_START		0x20
+#include "tpmk_driver.h"
 
 struct resource *gpMyAdda;
 void *gpBase;
@@ -47,8 +19,6 @@ void tpm_dump_info(void)
 	vid = ioread32(gpBase+L0_VID);
 	printk(KERN_INFO MODULE_NAME "VendorId at %p = %x, %x\n", gpBase+L0_VID, vid, temp);
 }
-
-#define MAXWAITCNT_REQUESTLOCALITY 20
 
 int tpm_wait_for(void *addr, int mask, int trueValue, int maxWaitCnt, char *msgPrefix)
 {
@@ -140,8 +110,6 @@ int tpm_init(void)
 	return 0;
 }
 
-#define MAXWAITCNT_FORCMDREADY 20
-
 int tpm_send(int locality, uint8_t *buf, int len)
 {
 	int cnt = 0;
@@ -210,9 +178,6 @@ int tpm_recv_helper(int locality, uint8_t *buf, int len)
 	}
 	return cnt;
 }
-
-#define MAXWAITCNT_DATAAVAIL 20
-#define RECV_INITIAL 10
 
 int tpm_recv(int locality, uint8_t *buf, int len)
 {
