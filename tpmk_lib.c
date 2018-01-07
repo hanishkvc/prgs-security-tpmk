@@ -30,29 +30,43 @@ uint8_t gcaGetCap_TPM_PT_MANUFACTURER [0x16] = {
 };
 
 uint8_t gcaTpmResponse[4096];
+int gbDebug_TpmCommandDumpFullResponse = 0;
 
-void tpm_command(int locality, uint8_t *buf, int size, char *msg)
+int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int outSize, char *msg)
 {
 	int i, iGot;
 
-	printk(KERN_INFO MODULE_NAME "command:%s: buffer size %d\n", msg, size);
-	tpm_send(locality, buf, size);
-	iGot = tpm_recv(0, gcaTpmResponse, 4096);
-	for(i = 0; i < iGot; i++) {
-		printk("%.4d=0x%.2x [%c], ", i, gcaTpmResponse[i], gcaTpmResponse[i]);
+	printk(KERN_INFO MODULE_NAME "command:%s: Input buffer size %d, Output buffer size %d\n", msg, inSize, outSize);
+	tpm_send(locality, inBuf, inSize);
+	iGot = tpm_recv(0, outBuf, outSize);
+	printk("ResponseTag : 0x%.4x\n", be16_to_cpup((__be16*)outBuf));
+	printk("ResponseSize: 0x%.8x\n", be32_to_cpup((__be32*)&outBuf[2]));
+	printk("ResponseCode: 0x%.8x\n", be32_to_cpup((__be32*)&outBuf[6]));
+	if (gbDebug_TpmCommandDumpFullResponse == 1) {
+		for(i = 10; i < iGot; i++) {
+			printk("%.4d=0x%.2x [%c], ", i, outBuf[i], outBuf[i]);
+		}
 	}
 	printk(KERN_INFO MODULE_NAME "command: done\n");
-
+	return iGot;
 }
 
 void tpm_startup(void)
 {
-	tpm_command(0, gcaTpm2Startup, sizeof(gcaTpm2Startup), "Tpm2Startup");
+	tpm_command(0, gcaTpm2Startup, sizeof(gcaTpm2Startup),
+			gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2Startup");
 }
 
 void tpm_getcap_ptfixed(void)
 {
-	tpm_command(0, gcaGetCap_TPM_PT_FIXED, sizeof(gcaGetCap_TPM_PT_FIXED), "GetCap_PTFIXED All");
+	int i, iGot;
+
+	iGot = tpm_command(0, gcaGetCap_TPM_PT_FIXED, sizeof(gcaGetCap_TPM_PT_FIXED),
+			gcaTpmResponse, sizeof(gcaTpmResponse), "GetCap_PTFIXED All");
+	printk("moreData:0x%x\n", gcaTpmResponse[10]);
+	for(i = 11; i < iGot; i+=8) {
+		printk("0x%.8x : 0x%.8x\n", be32_to_cpup((__be32*)&gcaTpmResponse[i]), be32_to_cpup((__be32*)&gcaTpmResponse[i+4]));
+	}
 }
 
 void tpm_get_capabilities(void)
