@@ -21,6 +21,7 @@ void tpm_dump_info(void)
 	printk(KERN_INFO MODULE_NAME "VendorId at %p = %x, %x\n", gpBase+L0_VID, vid, temp);
 	tpm_startup();
 	tpm_get_capabilities();
+	tpm_getcap_ptfixed();
 }
 
 int tpm_wait_for(void *addr, int mask, int trueValue, int maxWaitCnt, char *msgPrefix)

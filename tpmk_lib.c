@@ -11,6 +11,15 @@ uint8_t gcaTpm2Startup [0x0c] = {
 	0x00, 0x00			/* TPM_SU_CLEAR */
 };
 
+uint8_t gcaGetCap_TPM_PT_FIXED [0x16] = {
+	0x80, 0x01,			/* TPM_ST_NO_SESSIONS */
+	0x00, 0x00, 0x00, 0x16,		/* Size */
+	0x00, 0x00, 0x01, 0x7a,		/* CommandCode: TPM_CC_GetCapability */
+	0x00, 0x00, 0x00, 0x06,		/* Capability: TPM_CAP_TPM_PROPERTIES */
+	0x00, 0x00, 0x01, 0x00,		/* Property: TPM_PT_FAMILY_INDICATOR */
+	0x00, 0x00, 0x00, 0x01		/* Property Count */
+};
+
 uint8_t gcaGetCap_TPM_PT_MANUFACTURER [0x16] = {
 	0x80, 0x01,			/* TPM_ST_NO_SESSIONS */
 	0x00, 0x00, 0x00, 0x16,		/* Size */
@@ -39,6 +48,11 @@ void tpm_command(int locality, uint8_t *buf, int size, char *msg)
 void tpm_startup(void)
 {
 	tpm_command(0, gcaTpm2Startup, sizeof(gcaTpm2Startup), "Tpm2Startup");
+}
+
+void tpm_getcap_ptfixed(void)
+{
+	tpm_command(0, gcaGetCap_TPM_PT_FIXED, sizeof(gcaGetCap_TPM_PT_FIXED), "GetCap_PTFIXED All");
 }
 
 void tpm_get_capabilities(void)
