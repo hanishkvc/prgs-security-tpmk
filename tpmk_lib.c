@@ -147,11 +147,28 @@ void tpm_get_capabilities(void)
 void tpm_pcr_read(void)
 {
 	int i, iGot;
+	int iPos;
+	int j;
+	int iNumOfPcrSelections, iSizeOfSelect;
 
 	iGot = tpm_command(0, gcaTpmPCRRead_SHA1, sizeof(gcaTpmPCRRead_SHA1),
 			gcaTpmResponse, sizeof(gcaTpmResponse), "TpmPCRRead SHA1");
-	printk("pcrUpdateCounter:0x%x\n", be32_to_cpup((__be32*)&gcaTpmResponse[10]));
-	for(i = 14; i < iGot; i+=8) {
+	printk("pcrUpdateCounter:0x%.8x\n", be32_to_cpup((__be32*)&gcaTpmResponse[10]));
+	iNumOfPcrSelections = be32_to_cpup((__be32*)&gcaTpmResponse[14]);
+	printk("NumOfPcrSelections in Response [0x%.8x]\n", iNumOfPcrSelections);
+	iPos = 14+4;
+	for(i = 0; i < iNumOfPcrSelections; i++) {
+		printk("Group[%d] HashAlgo is [0x%.4x]", i, be16_to_cpup((__be16*)&gcaTpmResponse[iPos]));
+		iPos += 2;
+		iSizeOfSelect = gcaTpmResponse[iPos];
+		printk("Group[%d] sizeOfSelect is [0x%.2x]", i, iSizeOfSelect);
+		iPos += 1;
+		for(j = 0; j < iSizeOfSelect; j++) {
+			printk("Group[%d] PCRSelect[%d] = 0x%.2x", i, j, gcaTpmResponse[iPos]);
+			iPos += 1;
+		}
+	}
+	for(i = iPos; i < iGot; i+=8) {
 		printk("0x%.8x : 0x%.8x\n", be32_to_cpup((__be32*)&gcaTpmResponse[i]), be32_to_cpup((__be32*)&gcaTpmResponse[i+4]));
 	}
 }
