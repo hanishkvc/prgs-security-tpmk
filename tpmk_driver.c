@@ -19,9 +19,7 @@ void tpm_dump_info(void)
 	temp = ioread8(gpBase+L0_VID);
 	vid = ioread32(gpBase+L0_VID);
 	printk(KERN_INFO MODULE_NAME "VendorId at %p = %x, %x\n", gpBase+L0_VID, vid, temp);
-	tpm_startup();
-	tpm_get_capabilities();
-	tpm_getcap_ptfixed();
+	tpm_lib_dump_info();
 }
 
 int tpm_wait_for(void *addr, int mask, int trueValue, int maxWaitCnt, char *msgPrefix)
@@ -34,7 +32,7 @@ int tpm_wait_for(void *addr, int mask, int trueValue, int maxWaitCnt, char *msgP
 			return 0;
 		}
 		waitCnt += 1;
-		msleep(5);
+		msleep(MSLEEP_TPMWAITFOR);
 	} while (waitCnt < maxWaitCnt);
 	return -1;
 }
@@ -134,7 +132,7 @@ int tpm_send(int locality, uint8_t *buf, int len)
 	while(cnt < len) {
 		burstCnt = ioread8(gpBase+Lx_BURSTLEN_LSB(locality)) | (ioread8(gpBase+Lx_BURSTLEN_MSB(locality))<<8);
 		if (burstCnt <= 0) {
-			msleep(1);
+			msleep(MSLEEP_TPMSEND_BURST);
 		} else {
 			remaining = len - cnt;
 			if (burstCnt > remaining)
@@ -149,6 +147,10 @@ int tpm_send(int locality, uint8_t *buf, int len)
 				if (cnt < len) {
 					printk(KERN_ALERT MODULE_NAME "tpm_send: TPM outOfSync??? doesnt want remaining data %d", len-cnt);
 					return -3;
+				}
+			} else {
+				if (cnt >= len) {
+					printk(KERN_ALERT MODULE_NAME "tpm_send:DEBUG CmdBuf: TPM wants more data, but I dont have any");
 				}
 			}
 		}
@@ -169,7 +171,7 @@ int tpm_recv_helper(int locality, uint8_t *buf, int len)
 			(cnt < len)) {
 		burstCnt = ioread8(gpBase+Lx_BURSTLEN_LSB(locality)) | (ioread8(gpBase+Lx_BURSTLEN_MSB(locality))<<8);
 		if (burstCnt <= 0) {
-			msleep(1);
+			msleep(MSLEEP_TPMRECVHLPR_BURST);
 		} else {
 			remaining = len-cnt;
 			if (remaining > burstCnt)
@@ -195,7 +197,7 @@ int tpm_recv(int locality, uint8_t *buf, int len)
 
 	// Verify the TPM is ready with response
 	if (tpm_wait_for(gpBase+Lx_STATUS(locality), STATUS_VALID | STATUS_DATAAVAIL, STATUS_VALID | STATUS_DATAAVAIL, MAXWAITCNT_DATAAVAIL, "DataAvail4Recv") != 0) {
-		printk(KERN_ALERT MODULE_NAME "tpm_recv:TPM seems to be empty or out of sync");
+		printk(KERN_ALERT MODULE_NAME "tpm_recv:TPM seems to be empty/NotReady or out of sync");
 		return -2;
 	}
 
