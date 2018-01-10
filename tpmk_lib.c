@@ -55,13 +55,55 @@ int gbDebug_TpmCommandDumpFullResponse = 0;
 int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int outSize, char *msg)
 {
 	int i, iGot;
+	uint32_t respCode;
+	uint32_t respCode_11_08;
 
 	printk(KERN_INFO MODULE_NAME "command:%s: Input buffer size %d, Output buffer size %d\n", msg, inSize, outSize);
 	tpm_send(locality, inBuf, inSize);
 	iGot = tpm_recv(0, outBuf, outSize);
 	printk("ResponseTag : 0x%.4x\n", be16_to_cpup((__be16*)outBuf));
 	printk("ResponseSize: 0x%.8x\n", be32_to_cpup((__be32*)&outBuf[2]));
-	printk("ResponseCode: 0x%.8x\n", be32_to_cpup((__be32*)&outBuf[6]));
+	respCode = be32_to_cpup((__be32*)&outBuf[6]);
+	printk("ResponseCode: 0x%.8x\n", respCode);
+	if (respCode != 0) {
+		printk("ERR:Mugambo Kush Nai hai hoo haa");
+		if (respCode & 0x80) {
+			respCode_11_08 = (respCode & 0xf00) >> 8;
+			printk("INFO: Format-One Response code");
+			if (respCode & 0x40) {
+				printk("\tINFO: Parameter Number [%d] has Error", respCode_11_08);
+			} else {
+				if (respCode_11_08 == 0) {
+					printk("\tINFO: 0x%x : HandleError Or Not able to pin it to handle, session, parameter", respCode_11_08);
+				} else {
+					if ((respCode_11_08 > 0) && (respCode_11_08 <= 7) ){
+						printk("\tINFO: 0x%x : HandleError ?Parameter Number?", respCode_11_08);
+					} else {
+						printk("\tINFO: 0x%x : SessionError ?Session Number?", respCode_11_08);
+					}
+				}
+			}
+			printk("INFO: Error [0x%x]\n", respCode & 0x3f);
+		} else {
+			printk("INFO: Format-Zero Response code");
+			if (respCode & 0x100) {
+				printk("\tINFO: Error defined in Version: 2.0, ResponseTag should be TPM_ST_NO_SESSIONS");
+			} else {
+				printk("\tINFO: Error defined in Version: ?1.2?, ResponseTag should be TPM_TAG_RSP_COMMAND");
+			}
+			if (respCode & 0x400) {
+				printk("\tINFO: Error defined by TPM Vendor");
+			} else {
+				printk("\tINFO: Error defined by TCG");
+			}
+			if (respCode & 0x800) {
+				printk("\tINFO: Severity is Warning, ? What TPM What ?");
+			} else {
+				printk("\tINFO: Severity is Command has Error");
+			}
+			printk("INFO: Error [0x%x]\n", respCode & 0x7f);
+		}
+	}
 	if (gbDebug_TpmCommandDumpFullResponse == 1) {
 		for(i = 10; i < iGot; i++) {
 			printk("%.4d=0x%.2x [%c], ", i, outBuf[i], outBuf[i]);
