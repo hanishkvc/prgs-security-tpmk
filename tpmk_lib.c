@@ -160,15 +160,16 @@ void tpm_pcr_read(void)
 	printk("NumOfPcrSelections in Response [0x%.8x]\n", iNumOfPcrSelections);
 	iPos = 14+4;
 	for(i = 0; i < iNumOfPcrSelections; i++) {
-		printk("Group[%d] HashAlgo is [0x%.4x]", i, be16_to_cpup((__be16*)&gcaTpmResponse[iPos]));
+		printk("PCRSelection[%d] HashAlgo is [0x%.4x]", i, be16_to_cpup((__be16*)&gcaTpmResponse[iPos]));
 		iPos += 2;
 		iSizeOfSelect = gcaTpmResponse[iPos];
-		printk("Group[%d] sizeOfSelect is [0x%.2x]", i, iSizeOfSelect);
+		printk("PCRSelection[%d] sizeOfSelect is [0x%.2x]\n", i, iSizeOfSelect);
 		iPos += 1;
 		for(j = 0; j < iSizeOfSelect; j++) {
-			printk("Group[%d] PCRSelect[%d] = 0x%.2x", i, j, gcaTpmResponse[iPos]);
+			printk(KERN_CONT "0x%.2x ", gcaTpmResponse[iPos]);
 			iPos += 1;
 		}
+		printk(KERN_CONT "\n");
 	}
 	// TPML_DIGEST
 	iNumOfDigests = be32_to_cpup((__be32*)&gcaTpmResponse[iPos]);
@@ -177,11 +178,12 @@ void tpm_pcr_read(void)
 	for(i = 0; i < iNumOfDigests; i++) {
 		iSizeOfDigest = be16_to_cpup((__be16*)&gcaTpmResponse[iPos]);
 		iPos += 2;
-		printk("Digest[%d] of size [0x%.2x]", i, iSizeOfDigest);
+		printk("Digest[%d] of size [0x%.2x]\n", i, iSizeOfDigest);
 		for(j = 0; j < iSizeOfDigest; j++) {
-			printk("Digest[%d] Offset[%d] = 0x%.2x", i, j, gcaTpmResponse[iPos]);
+			printk(KERN_CONT "0x%.2x ", gcaTpmResponse[iPos]);
 			iPos += 1;
 		}
+		printk(KERN_CONT "\n");
 	}
 	for(i = iPos; i < iGot; i+=1) {
 		printk("DEBUG:OverFlow: 0x%.8x : 0x%.2x\n", i, gcaTpmResponse[i]);
