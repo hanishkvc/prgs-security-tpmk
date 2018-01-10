@@ -29,6 +29,26 @@ uint8_t gcaGetCap_TPM_PT_MANUFACTURER [0x16] = {
 	0x00, 0x00, 0x00, 0x01		/* Property Count */
 };
 
+uint8_t gcaTpmPCRRead_SHA1 [0x14] = {
+	0x80, 0x01,			/* TPM_ST_NO_SESSIONS */
+	0x00, 0x00, 0x00, 0x14,		/* Size */
+	0x00, 0x00, 0x01, 0x7e,		/* CommandCode: TPM_CC_PCR_Read */
+	0x00, 0x00, 0x00, 0x01,		/* TPML_PCR_SELECTION.count */
+	0x00, 0x04,			/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].hash_TPMI_ALG_HASH=TPM_ALG_SHA1 */
+	0x03,				/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].sizeofSelect=8x3=24 PCRs */
+	0xff, 0xff, 0xff		/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].pcrSelect = All 24 PCRs */
+};
+
+uint8_t gcaTpmPCRRead_SHA256 [0x14] = {
+	0x80, 0x01,			/* TPM_ST_NO_SESSIONS */
+	0x00, 0x00, 0x00, 0x14,		/* Size */
+	0x00, 0x00, 0x01, 0x7e,		/* CommandCode: TPM_CC_PCR_Read */
+	0x00, 0x00, 0x00, 0x01,		/* TPML_PCR_SELECTION.count */
+	0x00, 0x0b,			/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].hash_TPMI_ALG_HASH=TPM_ALG_SHA256 */
+	0x03,				/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].sizeofSelect=8x3=24 PCRs */
+	0xff, 0xff, 0xff		/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].pcrSelect = All 24 PCRs */
+};
+
 uint8_t gcaTpmResponse[4096];
 int gbDebug_TpmCommandDumpFullResponse = 0;
 
@@ -80,5 +100,25 @@ void tpm_get_capabilities(void)
 		printk("%d=%x, ", i, gcaTpmResponse[i]);
 	}
 	printk(KERN_INFO MODULE_NAME "GetCap:Done\n");
+}
+
+void tpm_pcr_read(void)
+{
+	int i, iGot;
+
+	iGot = tpm_command(0, gcaTpmPCRRead_SHA1, sizeof(gcaTpmPCRRead_SHA1),
+			gcaTpmResponse, sizeof(gcaTpmResponse), "TpmPCRRead SHA1");
+	printk("pcrUpdateCounter:0x%x\n", be32_to_cpup((__be32*)&gcaTpmResponse[10]));
+	for(i = 14; i < iGot; i+=8) {
+		printk("0x%.8x : 0x%.8x\n", be32_to_cpup((__be32*)&gcaTpmResponse[i]), be32_to_cpup((__be32*)&gcaTpmResponse[i+4]));
+	}
+}
+
+void tpm_lib_dump_info(void)
+{
+	tpm_startup();
+	tpm_get_capabilities();
+	tpm_getcap_ptfixed();
+	tpm_pcr_read();
 }
 
