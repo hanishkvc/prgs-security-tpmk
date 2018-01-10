@@ -36,7 +36,7 @@ uint8_t gcaTpmPCRRead_SHA1 [0x14] = {
 	0x00, 0x00, 0x00, 0x01,		/* TPML_PCR_SELECTION.count */
 	0x00, 0x04,			/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].hash_TPMI_ALG_HASH=TPM_ALG_SHA1 */
 	0x03,				/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].sizeofSelect=8x3=24 PCRs */
-	0xff, 0xff, 0xff		/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].pcrSelect = All 24 PCRs */
+	0x00, 0xff, 0xff		/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].pcrSelect = All 24 PCRs */
 };
 
 uint8_t gcaTpmPCRRead_SHA256 [0x14] = {
