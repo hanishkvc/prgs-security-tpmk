@@ -51,6 +51,30 @@ uint8_t gcaTpmPCRRead_SHA256 [0x14] = {
 	0xff, 0xff, 0xff		/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].pcrSelect = All 24 PCRs */
 };
 
+uint8_t gcaTpmPCRExtend_SHA1 [0x35] = {
+	0x80, 0x02,			/* TPM_ST_SESSIONS */
+	0x00, 0x00, 0x00, 0x35,		/* Size */
+	0x00, 0x00, 0x01, 0x82,		/* CommandCode: TPM_CC_PCR_Extend */
+	/* TPM_HANDLE */
+	0x00, 0x00, 0x00, 0x00,		/* TPMI_DH_PCR=TPM_HANDLE(8bits:TPM_HT_PCR,24Bits) */
+	0x00, 0x00, 0x00, 0x09,		/* TPMS_AUTH_COMMAND Structure size */
+	/* TPMS_AUTH_COMMAND */
+	0x40, 0x00, 0x00, 0x09,		/* TPMI_SH_AUTH_SESSION=>TPM_RS_PW */
+	0x00, 0x00,			/* A empty TPM2B_NONCE */
+	0x01,				/* continue the TPMA_SESSION, attribute */
+	0x00, 0x00,			/* TPM2B_AUTH: A Null Authorisation */
+	/* TPML_DIGEST_VALUES */
+	0x00, 0x00, 0x00, 0x01,		/* count */
+	0x00, 0x04,			/* TPMT_HA.TPMI_ALG_HASH=TPM_ALG_SHA1 */
+	0x01, 0x23, 0x45, 0x67, 0x89,	/* PTMT_HA.SHA1.Digest... */
+	0x01, 0x23, 0x45, 0x67, 0x89,
+	0x01, 0x23, 0x45, 0x67, 0x89,
+	0x01, 0x23, 0x45, 0x67, 0x89
+};
+
+
+
+
 uint8_t gcaTpmResponse[4096];
 int gbDebug_TpmCommandDumpFullResponse = 0;
 
@@ -202,7 +226,7 @@ void tpm_pcr_read(void)
 	iPos = tpm_print_tpml_pcr_selection(gcaTpmResponse, 14);
 	// TPML_DIGEST
 	iPos = tpm_print_tpml_digest(gcaTpmResponse, iPos);
-	// Reprint with the print helper functions
+	// print anything else still left in the response buffer: There shouldnt be but just in case...
 	for(i = iPos; i < iGot; i+=1) {
 		printk("DEBUG:OverFlow: 0x%.8x : 0x%.2x\n", i, gcaTpmResponse[i]);
 	}
@@ -221,11 +245,25 @@ void tpm_pcr_read_all(void)
 	}
 }
 
+void tpm_pcr_extend(void)
+{
+	int i, iGot;
+
+	iGot = tpm_command(0, gcaTpmPCRExtend_SHA1, sizeof(gcaTpmPCRExtend_SHA1),
+			gcaTpmResponse, sizeof(gcaTpmResponse), "TpmPCRExtend SHA1");
+	// print anything in the response beyond the header
+	for(i = 10; i < iGot; i+=1) {
+		printk("DEBUG:OverFlow: 0x%.8x : 0x%.2x\n", i, gcaTpmResponse[i]);
+	}
+}
+
 void tpm_lib_dump_info(void)
 {
 	tpm_startup();
 	tpm_get_capabilities();
 	tpm_getcap_ptfixed();
+	tpm_pcr_read_all();
+	tpm_pcr_extend();
 	tpm_pcr_read_all();
 }
 
