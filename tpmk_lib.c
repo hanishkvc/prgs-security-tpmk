@@ -36,7 +36,9 @@ uint8_t gcaTpmPCRRead_SHA1 [0x14] = {
 	0x00, 0x00, 0x00, 0x01,		/* TPML_PCR_SELECTION.count */
 	0x00, 0x04,			/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].hash_TPMI_ALG_HASH=TPM_ALG_SHA1 */
 	0x03,				/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].sizeofSelect=8x3=24 PCRs */
-	0x00, 0xff, 0xff		/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].pcrSelect = All 24 PCRs */
+	/* pcr07-pcr00, pcr15-pcr08, pcr23-pcr16 */
+	0xff, 0xff, 0xff		/* TPML_PCR_SELECTION.TPMS_PCR_SELECTION[0].pcrSelect = All 24 PCRs */
+	/* if only interested in pcr0, then instead of 0x03, 0xff, 0xff, 0xff use 0x01, 0x01 and reduce size accordingly */
 };
 
 uint8_t gcaTpmPCRRead_SHA256 [0x14] = {
@@ -144,47 +146,63 @@ void tpm_get_capabilities(void)
 	printk(KERN_INFO MODULE_NAME "GetCap:Done\n");
 }
 
+int tpm_print_tpml_pcr_selection(uint8_t *buf, int iPos)
+{
+	int i, j;
+	int iNumOfPcrSelections, iSizeOfSelect;
+
+	iNumOfPcrSelections = be32_to_cpup((__be32*)&buf[iPos]);
+	iPos += 4;
+	printk("NumOfPcrSelections in Response [0x%.8x]\n", iNumOfPcrSelections);
+	for(i = 0; i < iNumOfPcrSelections; i++) {
+		printk("PCRSelection[%d] HashAlgo is [0x%.4x]", i, be16_to_cpup((__be16*)&buf[iPos]));
+		iPos += 2;
+		iSizeOfSelect = buf[iPos];
+		printk("PCRSelection[%d] sizeOfSelect is [0x%.2x]\n", i, iSizeOfSelect);
+		iPos += 1;
+		for(j = 0; j < iSizeOfSelect; j++) {
+			printk(KERN_CONT "0x%.2x ", buf[iPos]);
+			iPos += 1;
+		}
+		printk(KERN_CONT "\n");
+	}
+	return iPos;
+}
+
+int tpm_print_tpml_digest(uint8_t *buf, int iPos)
+{
+	int i,j;
+	int iNumOfDigests, iSizeOfDigest;
+
+	iNumOfDigests = be32_to_cpup((__be32*)&buf[iPos]);
+	iPos += 4;
+	printk("NumOfDigests in Response [0x%.8x]\n", iNumOfDigests);
+	for(i = 0; i < iNumOfDigests; i++) {
+		iSizeOfDigest = be16_to_cpup((__be16*)&buf[iPos]);
+		iPos += 2;
+		printk("Digest[%d] of size [0x%.2x]\n", i, iSizeOfDigest);
+		for(j = 0; j < iSizeOfDigest; j++) {
+			printk(KERN_CONT "0x%.2x ", buf[iPos]);
+			iPos += 1;
+		}
+		printk(KERN_CONT "\n");
+	}
+	return iPos;
+}
+
 void tpm_pcr_read(void)
 {
 	int i, iGot;
 	int iPos;
-	int j;
-	int iNumOfPcrSelections, iSizeOfSelect;
-	int iNumOfDigests, iSizeOfDigest;
 
 	iGot = tpm_command(0, gcaTpmPCRRead_SHA1, sizeof(gcaTpmPCRRead_SHA1),
 			gcaTpmResponse, sizeof(gcaTpmResponse), "TpmPCRRead SHA1");
 	printk("pcrUpdateCounter:0x%.8x\n", be32_to_cpup((__be32*)&gcaTpmResponse[10]));
 	// TPML_PCR_SELECTION
-	iNumOfPcrSelections = be32_to_cpup((__be32*)&gcaTpmResponse[14]);
-	printk("NumOfPcrSelections in Response [0x%.8x]\n", iNumOfPcrSelections);
-	iPos = 14+4;
-	for(i = 0; i < iNumOfPcrSelections; i++) {
-		printk("PCRSelection[%d] HashAlgo is [0x%.4x]", i, be16_to_cpup((__be16*)&gcaTpmResponse[iPos]));
-		iPos += 2;
-		iSizeOfSelect = gcaTpmResponse[iPos];
-		printk("PCRSelection[%d] sizeOfSelect is [0x%.2x]\n", i, iSizeOfSelect);
-		iPos += 1;
-		for(j = 0; j < iSizeOfSelect; j++) {
-			printk(KERN_CONT "0x%.2x ", gcaTpmResponse[iPos]);
-			iPos += 1;
-		}
-		printk(KERN_CONT "\n");
-	}
+	iPos = tpm_print_tpml_pcr_selection(gcaTpmResponse, 14);
 	// TPML_DIGEST
-	iNumOfDigests = be32_to_cpup((__be32*)&gcaTpmResponse[iPos]);
-	iPos += 4;
-	printk("NumOfDigests in Response [0x%.8x]\n", iNumOfDigests);
-	for(i = 0; i < iNumOfDigests; i++) {
-		iSizeOfDigest = be16_to_cpup((__be16*)&gcaTpmResponse[iPos]);
-		iPos += 2;
-		printk("Digest[%d] of size [0x%.2x]\n", i, iSizeOfDigest);
-		for(j = 0; j < iSizeOfDigest; j++) {
-			printk(KERN_CONT "0x%.2x ", gcaTpmResponse[iPos]);
-			iPos += 1;
-		}
-		printk(KERN_CONT "\n");
-	}
+	iPos = tpm_print_tpml_digest(gcaTpmResponse, iPos);
+	// Reprint with the print helper functions
 	for(i = iPos; i < iGot; i+=1) {
 		printk("DEBUG:OverFlow: 0x%.8x : 0x%.2x\n", i, gcaTpmResponse[i]);
 	}
