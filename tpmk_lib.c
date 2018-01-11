@@ -245,14 +245,47 @@ void tpm_pcr_read_all(void)
 	}
 }
 
+int tpm_print_tpm2b(uint8_t *buf, int iPos, char *msg)
+{
+	int iSize, i;
+
+	iSize = be16_to_cpup((__be16*)&buf[iPos]);
+	iPos += 2;
+	printk("%s: Size [%d]\n", msg, iSize);
+	printk("%s: Data [ ", msg);
+	for(i = 0; i < iSize; i++) {
+		printk(KERN_CONT "0x%.2x, ", buf[iPos]);
+		iPos += 1;
+	}
+	printk(KERN_CONT "]\n");
+	return iPos;
+}
+
+int tpm_print_tpms_auth_response(uint8_t *buf, int iPos)
+{
+	printk("TPMS_AUTH_RESPONSE Decode...");
+	// TPM2B_NONCE
+	iPos = tpm_print_tpm2b(buf, iPos, "\tTPM2B_NONCE");
+	// TPMA_SESSION
+	printk("\tTPMA_SESSION [0x%.2x]\n", buf[iPos]);
+	iPos += 1;
+	// TPM2B_AUTH
+	iPos = tpm_print_tpm2b(buf, iPos, "\tTPM2B_AUTH");
+	return iPos;
+}
+
 void tpm_pcr_extend(void)
 {
-	int i, iGot;
+	int i, iGot, iPos;
+	uint32_t iParamSize;
 
 	iGot = tpm_command(0, gcaTpmPCRExtend_SHA1, sizeof(gcaTpmPCRExtend_SHA1),
 			gcaTpmResponse, sizeof(gcaTpmResponse), "TpmPCRExtend SHA1");
-	// print anything in the response beyond the header
-	for(i = 10; i < iGot; i+=1) {
+	// print anything in the response beyond the header, which should include the response Authorisation structure
+	iParamSize = be32_to_cpup((__be32*)&gcaTpmResponse[10]);
+	printk("ParamSize: %d\n", iParamSize);
+	iPos = tpm_print_tpms_auth_response(gcaTpmResponse, 14);
+	for(i = iPos; i < iGot; i+=1) {
 		printk("DEBUG:OverFlow: 0x%.8x : 0x%.2x\n", i, gcaTpmResponse[i]);
 	}
 }
