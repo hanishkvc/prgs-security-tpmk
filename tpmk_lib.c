@@ -208,11 +208,24 @@ void tpm_pcr_read(void)
 	}
 }
 
+void tpm_pcr_read_all(void)
+{
+	int i;
+	int iSize = sizeof(gcaTpmPCRRead_SHA1);
+	for(i = 0; i < 3; i++) {
+		gcaTpmPCRRead_SHA1[iSize-1] = 0x0;
+		gcaTpmPCRRead_SHA1[iSize-2] = 0x0;
+		gcaTpmPCRRead_SHA1[iSize-3] = 0x0;
+		gcaTpmPCRRead_SHA1[iSize-1-i] = 0xff;
+		tpm_pcr_read();
+	}
+}
+
 void tpm_lib_dump_info(void)
 {
 	tpm_startup();
 	tpm_get_capabilities();
 	tpm_getcap_ptfixed();
-	tpm_pcr_read();
+	tpm_pcr_read_all();
 }
 
