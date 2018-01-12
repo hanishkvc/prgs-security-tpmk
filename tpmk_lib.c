@@ -111,7 +111,7 @@ int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int o
 	respCode = be32_to_cpup((__be32*)&outBuf[6]);
 	printk("ResponseCode: 0x%.8x\n", respCode);
 	if (respCode != 0) {
-		printk("ERR:Mugambo Kush Nai hai hoo haa");
+		printk(KERN_ALERT "ERR:Mugambo Kush allallo Nai hai hoo haa");
 		if (respCode & 0x80) {
 			respCode_11_08 = (respCode & 0xf00) >> 8;
 			printk("INFO: Format-One Response code");
@@ -316,6 +316,10 @@ void tpm_hierarchy_changeauth(void)
 
 	iGot = tpm_command(0, gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL, sizeof(gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL),
 			gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2HierarchyChangeAuth_OwnerPass_Initial");
+	if (iGot == 10) {
+		printk(KERN_ALERT "HierarchyChangeAuth seems to have failed\n");
+		return;
+	}
 	// print anything in the response beyond the header, which should include the response Authorisation structure
 	iParamSize = be32_to_cpup((__be32*)&gcaTpmResponse[10]);
 	printk("ParamSize: %d\n", iParamSize);
