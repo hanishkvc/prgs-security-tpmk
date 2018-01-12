@@ -72,7 +72,26 @@ uint8_t gcaTpmPCRExtend_SHA1 [0x35] = {
 	0x01, 0x23, 0x45, 0x67, 0x89
 };
 
-
+uint8_t gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL [0x31] = {
+	0x80, 0x02,			/* TPM_ST_SESSIONS */
+	0x00, 0x00, 0x00, 0x31,		/* Size */
+	0x00, 0x00, 0x01, 0x29,		/* CommandCode: TPM_CC_HierarchyChangeAuth */
+	/* TPMI_RH_HIERARCHY_AUTH */
+	0x40, 0x00, 0x00, 0x01,		/* TPM_RH_OWNER */
+	// Size of Auth Structure
+	0x00, 0x00, 0x00, 0x09,		/* TPMS_AUTH_COMMAND Structure size */
+	/* TPMS_AUTH_COMMAND */
+	0x40, 0x00, 0x00, 0x09,		/* TPMI_SH_AUTH_SESSION=>TPM_RS_PW */
+	0x00, 0x00,			/* A empty TPM2B_NONCE */
+	0x01,				/* continue the TPMA_SESSION, attribute */
+	0x00, 0x00,			/* TPM2B_AUTH: A Null Authorisation */
+	/* TPM2B_AUTH New */
+	0x00, 0x14,			/* Size */
+	0x01, 0x23, 0x45, 0x67, 0x89,	/* Password */
+	0x00, 0x00, 0x45, 0x67, 0x89,
+	0x01, 0x23, 0x45, 0x00, 0x00,
+	0x01, 0x23, 0x45, 0x67, 0x89
+};
 
 
 uint8_t gcaTpmResponse[4096];
@@ -290,6 +309,22 @@ void tpm_pcr_extend(void)
 	}
 }
 
+void tpm_hierarchy_changeauth(void)
+{
+	int i, iGot, iPos;
+	uint32_t iParamSize;
+
+	iGot = tpm_command(0, gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL, sizeof(gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL),
+			gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2HierarchyChangeAuth_OwnerPass_Initial");
+	// print anything in the response beyond the header, which should include the response Authorisation structure
+	iParamSize = be32_to_cpup((__be32*)&gcaTpmResponse[10]);
+	printk("ParamSize: %d\n", iParamSize);
+	iPos = tpm_print_tpms_auth_response(gcaTpmResponse, 14);
+	for(i = iPos; i < iGot; i+=1) {
+		printk("DEBUG:OverFlow: 0x%.8x : 0x%.2x\n", i, gcaTpmResponse[i]);
+	}
+}
+
 void tpm_lib_dump_info(void)
 {
 	tpm_startup();
@@ -298,5 +333,6 @@ void tpm_lib_dump_info(void)
 	tpm_pcr_read_all();
 	tpm_pcr_extend();
 	tpm_pcr_read_all();
+	tpm_hierarchy_changeauth();
 }
 
