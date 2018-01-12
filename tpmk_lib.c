@@ -3,6 +3,7 @@
  * HanishKVC, 2018
  */
 #include "tpmk_driver.h"
+#include "tpmk_lib.h"
 
 uint8_t gcaTpm2Startup [0x0c] = {
 	0x80, 0x01,			/* TAG: TPM_ST_NO_SESSIONS */
@@ -71,6 +72,8 @@ uint8_t gcaTpmPCRExtend_SHA1 [0x35] = {
 	0x01, 0x23, 0x45, 0x67, 0x89,
 	0x01, 0x23, 0x45, 0x67, 0x89
 };
+
+#define HIERARCHYCHANGEAUTH_RHHIERARCHY 10
 
 uint8_t gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL [0x31] = {
 	0x80, 0x02,			/* TPM_ST_SESSIONS */
@@ -311,21 +314,29 @@ void tpm_pcr_extend(void)
 
 void tpm_hierarchy_changeauth(void)
 {
-	int i, iGot, iPos;
+	int i, j, iGot, iPos;
 	uint32_t iParamSize;
+	uint32_t hierarchies[4] = { TPM_RH_OWNER, TPM_RH_LOCKOUT, TPM_RH_ENDORSEMENT, TPM_RH_PLATFORM };
+	char* msgs[4] = { "Owner", "Lockout", "Endorsement", "Platform" };
+	char theMsg[64];
 
-	iGot = tpm_command(0, gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL, sizeof(gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL),
-			gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2HierarchyChangeAuth_OwnerPass_Initial");
-	if (iGot == 10) {
-		printk(KERN_ALERT "HierarchyChangeAuth seems to have failed\n");
-		return;
-	}
-	// print anything in the response beyond the header, which should include the response Authorisation structure
-	iParamSize = be32_to_cpup((__be32*)&gcaTpmResponse[10]);
-	printk("ParamSize: %d\n", iParamSize);
-	iPos = tpm_print_tpms_auth_response(gcaTpmResponse, 14);
-	for(i = iPos; i < iGot; i+=1) {
-		printk("DEBUG:OverFlow: 0x%.8x : 0x%.2x\n", i, gcaTpmResponse[i]);
+	for (j = 0; j < 4; j++) {
+		strncpy(theMsg, "Tpm2HierarchyChangeAuth_Initial_", 64);
+		strncat(theMsg, msgs[j], 64);
+		*((uint32_t*)&gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL[HIERARCHYCHANGEAUTH_RHHIERARCHY]) = cpu_to_be32(hierarchies[j]);
+		iGot = tpm_command(0, gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL, sizeof(gcaTpm2HierarchyChangeAuth_OWNERPASS_INITIAL),
+				gcaTpmResponse, sizeof(gcaTpmResponse), theMsg);
+		if (iGot == 10) {
+			printk(KERN_ALERT "HierarchyChangeAuth seems to have failed\n");
+			continue;
+		}
+		// print anything in the response beyond the header, which should include the response Authorisation structure
+		iParamSize = be32_to_cpup((__be32*)&gcaTpmResponse[10]);
+		printk("ParamSize: %d\n", iParamSize);
+		iPos = tpm_print_tpms_auth_response(gcaTpmResponse, 14);
+		for(i = iPos; i < iGot; i+=1) {
+			printk("DEBUG:OverFlow: 0x%.8x : 0x%.2x\n", i, gcaTpmResponse[i]);
+		}
 	}
 }
 

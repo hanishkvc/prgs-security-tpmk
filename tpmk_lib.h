@@ -1,11 +1,16 @@
 /*
- * tpmk_lib.c
+ * tpmk_lib.h
  * HanishKVC, 2018
  */
 #ifndef _TPMK_LIB_H_
 #define _TPMK_LIB_H_
 
-void tpm_command(int locality, uint8_t *buf, int size, char *msg);
+#define TPM_RH_OWNER		0x40000001
+#define TPM_RH_LOCKOUT		0x4000000A
+#define TPM_RH_ENDORSEMENT	0x4000000B
+#define TPM_RH_PLATFORM		0x4000000C
+
+int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int outSize, char *msg);
 void tpm_startup(void);
 void tpm_getcap_ptfixed(void);
 void tpm_get_capabilities(void);
