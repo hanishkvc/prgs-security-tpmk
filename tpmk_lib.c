@@ -365,6 +365,8 @@ void tpm_hierarchy_changeauth(uint8_t *cmdBuf, int len)
 	}
 }
 
+#undef FIRSTTIME_RUN
+
 void tpm_lib_dump_info(void)
 {
 	tpm_startup();
@@ -373,8 +375,10 @@ void tpm_lib_dump_info(void)
 	tpm_pcr_read_all();
 	tpm_pcr_extend();
 	tpm_pcr_read_all();
+#ifdef FIRSTTIME_RUN
 	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS,
 					sizeof(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS));
+#endif
 	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_ANYTIME,
 					sizeof(gcaTpm2HierarchyChangeAuth_ANYTIME));
 }
