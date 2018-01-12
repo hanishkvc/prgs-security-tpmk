@@ -337,7 +337,7 @@ void tpm_pcr_extend(void)
 	}
 }
 
-void tpm_hierarchy_changeauth(uint8_t *cmdBuf)
+void tpm_hierarchy_changeauth(uint8_t *cmdBuf, int len)
 {
 	int i, j, iGot, iPos;
 	uint32_t iParamSize;
@@ -349,7 +349,7 @@ void tpm_hierarchy_changeauth(uint8_t *cmdBuf)
 		strncpy(theMsg, "Tpm2HierarchyChangeAuth_Initial_", 64);
 		strncat(theMsg, msgs[j], 64);
 		*((uint32_t*)&cmdBuf[HIERARCHYCHANGEAUTH_RHHIERARCHY]) = cpu_to_be32(hierarchies[j]);
-		iGot = tpm_command(0, cmdBuf, sizeof(cmdBuf),
+		iGot = tpm_command(0, cmdBuf, len,
 				gcaTpmResponse, sizeof(gcaTpmResponse), theMsg);
 		if (iGot == 10) {
 			printk(KERN_ALERT "HierarchyChangeAuth seems to have failed\n");
@@ -373,7 +373,9 @@ void tpm_lib_dump_info(void)
 	tpm_pcr_read_all();
 	tpm_pcr_extend();
 	tpm_pcr_read_all();
-	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS);
-	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_ANYTIME);
+	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS,
+					sizeof(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS));
+	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_ANYTIME,
+					sizeof(gcaTpm2HierarchyChangeAuth_ANYTIME));
 }
 
