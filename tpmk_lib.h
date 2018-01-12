@@ -17,6 +17,11 @@ void tpm_get_capabilities(void);
 int tpm_print_tpml_pcr_selection(uint8_t *buf, int iPos);
 int tpm_print_tpml_digest(uint8_t *buf, int iPos);
 void tpm_pcr_read(void);
+void tpm_pcr_read_all(void);
+int tpm_print_tpm2b(uint8_t *buf, int iPos, char *msg);
+int tpm_print_tpms_auth_response(uint8_t *buf, int iPos);
+void tpm_pcr_extend(void);
+void tpm_hierarchy_changeauth(uint8_t *cmdBuf);
 void tpm_lib_dump_info(void);
 
 #endif
