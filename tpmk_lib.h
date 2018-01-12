@@ -10,6 +10,8 @@
 #define TPM_RH_ENDORSEMENT	0x4000000B
 #define TPM_RH_PLATFORM		0x4000000C
 
+extern uint64_t gCurRunTime, gTotalRunTime;
+
 struct domain {
 	uint32_t handle;
 	char *name;

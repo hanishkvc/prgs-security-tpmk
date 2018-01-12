@@ -131,6 +131,8 @@ uint8_t gcaTpm2HierarchyChangeAuth_ANYTIME [0x45] = {
 uint8_t gcaTpmResponse[4096];
 int gbDebug_TpmCommandDumpFullResponse = 0;
 
+uint64_t gCurRunTime, gTotalRunTime;
+
 struct domain domainsALL[4] = { {TPM_RH_PLATFORM, "Platform" }, {TPM_RH_OWNER, "Owner" },
 				{TPM_RH_ENDORSEMENT, "Endorsement"}, {TPM_RH_LOCKOUT, "LockOut"} };
 struct domain domainsALWAYS[1] = { {TPM_RH_PLATFORM, "Platform" } };
@@ -210,8 +212,10 @@ void tpm_readclock(void)
 
 	iGot = tpm_command(0, gcaTpm2ReadClock, sizeof(gcaTpm2ReadClock),
 			gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2ReadClock");
-	printk("\tCurRuntime(msec):0x%llx\n", be64_to_cpup((__be64*)&gcaTpmResponse[10]));
-	printk("\tTotalRunTime(msec):0x%llx\n", be64_to_cpup((__be64*)&gcaTpmResponse[18]));
+	gCurRunTime = be64_to_cpup((__be64*)&gcaTpmResponse[10]);
+	printk("\tCurRuntime(msec):0x%.16llx, (mins) %lld\n", gCurRunTime, gCurRunTime/(1000*60));
+	gTotalRunTime = be64_to_cpup((__be64*)&gcaTpmResponse[18]);
+	printk("\tTotalRunTime(msec):0x%.16llx, (mins) %lld\n", gTotalRunTime, gTotalRunTime/(1000*60));
 	printk("\tResetCount:0x%x\n", be32_to_cpup((__be32*)&gcaTpmResponse[26]));
 	printk("\tRestartCount:0x%x\n", be32_to_cpup((__be32*)&gcaTpmResponse[30]));
 	printk("\tSafe:0x%x\n", gcaTpmResponse[34]);
