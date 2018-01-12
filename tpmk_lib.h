@@ -22,6 +22,7 @@ extern char* domainsName[4];
 
 int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int outSize, char *msg);
 void tpm_startup(void);
+void tpm_readclock(void);
 void tpm_getcap_ptfixed(void);
 void tpm_get_capabilities(void);
 int tpm_print_tpml_pcr_selection(uint8_t *buf, int iPos);

@@ -12,6 +12,12 @@ uint8_t gcaTpm2Startup [0x0c] = {
 	0x00, 0x00			/* TPM_SU_CLEAR */
 };
 
+uint8_t gcaTpm2ReadClock [0x0a] = {
+	0x80, 0x01,			/* TAG: TPM_ST_NO_SESSIONS */
+	0x00, 0x00, 0x00, 0x0a,		/* Size */
+	0x00, 0x00, 0x01, 0x81		/* CommandCode: TPM_CC_ReadClock */
+};
+
 uint8_t gcaGetCap_TPM_PT_FIXED [0x16] = {
 	0x80, 0x01,			/* TPM_ST_NO_SESSIONS */
 	0x00, 0x00, 0x00, 0x16,		/* Size */
@@ -198,6 +204,27 @@ void tpm_startup(void)
 			gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2Startup");
 }
 
+void tpm_readclock(void)
+{
+	int i, iGot;
+
+	iGot = tpm_command(0, gcaTpm2ReadClock, sizeof(gcaTpm2ReadClock),
+			gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2ReadClock");
+	printk("\tCurRuntime(msec):0x%llx\n", be64_to_cpup((__be64*)&gcaTpmResponse[10]));
+	printk("\tTotalRunTime(msec):0x%llx\n", be64_to_cpup((__be64*)&gcaTpmResponse[18]));
+	printk("\tResetCount:0x%x\n", be32_to_cpup((__be32*)&gcaTpmResponse[26]));
+	printk("\tRestartCount:0x%x\n", be32_to_cpup((__be32*)&gcaTpmResponse[30]));
+	printk("\tSafe:0x%x\n", gcaTpmResponse[34]);
+
+	for(i = 10; i < iGot; i+=4) {
+		printk("0x%.8x\n", be32_to_cpup((__be32*)&gcaTpmResponse[i]));
+	}
+
+	if (iGot != 35) {
+		printk(KERN_ALERT "Seems odd, readclock returned more data ???");
+	}
+}
+
 void tpm_getcap_ptfixed(void)
 {
 	int i, iGot;
@@ -380,6 +407,7 @@ void tpm_lib_dump_info(void)
 	tpm_startup();
 	tpm_get_capabilities();
 	tpm_getcap_ptfixed();
+	tpm_readclock();
 	tpm_pcr_read_all();
 	tpm_pcr_extend();
 	tpm_pcr_read_all();
