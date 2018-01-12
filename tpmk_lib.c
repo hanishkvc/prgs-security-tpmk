@@ -125,6 +125,12 @@ uint8_t gcaTpm2HierarchyChangeAuth_ANYTIME [0x45] = {
 uint8_t gcaTpmResponse[4096];
 int gbDebug_TpmCommandDumpFullResponse = 0;
 
+struct domain domainsALL[4] = { {TPM_RH_PLATFORM, "Platform" }, {TPM_RH_OWNER, "Owner" },
+				{TPM_RH_ENDORSEMENT, "Endorsement"}, {TPM_RH_LOCKOUT, "LockOut"} };
+struct domain domainsALWAYS[1] = { {TPM_RH_PLATFORM, "Platform" } };
+uint32_t domainsHandle[4] = { TPM_RH_OWNER, TPM_RH_LOCKOUT, TPM_RH_ENDORSEMENT, TPM_RH_PLATFORM };
+char* domainsName[4] = { "Owner", "Lockout", "Endorsement", "Platform" };
+
 int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int outSize, char *msg)
 {
 	int i, iGot;
@@ -337,18 +343,17 @@ void tpm_pcr_extend(void)
 	}
 }
 
-void tpm_hierarchy_changeauth(uint8_t *cmdBuf, int len)
+void tpm_hierarchy_changeauth(uint8_t *cmdBuf, int len, char *msgCmdType, struct domain *domains, int numOfDomains)
 {
 	int i, j, iGot, iPos;
 	uint32_t iParamSize;
-	uint32_t hierarchies[4] = { TPM_RH_OWNER, TPM_RH_LOCKOUT, TPM_RH_ENDORSEMENT, TPM_RH_PLATFORM };
-	char* msgs[4] = { "Owner", "Lockout", "Endorsement", "Platform" };
 	char theMsg[64];
 
-	for (j = 0; j < 4; j++) {
-		strncpy(theMsg, "Tpm2HierarchyChangeAuth_Initial_", 64);
-		strncat(theMsg, msgs[j], 64);
-		*((uint32_t*)&cmdBuf[HIERARCHYCHANGEAUTH_RHHIERARCHY]) = cpu_to_be32(hierarchies[j]);
+	for (j = 0; j < numOfDomains; j++) {
+		strncpy(theMsg, "Tpm2HierarchyChangeAuth", 64);
+		strncat(theMsg, msgCmdType, 64);
+		strncat(theMsg, domains[j].name, 64);
+		*((uint32_t*)&cmdBuf[HIERARCHYCHANGEAUTH_RHHIERARCHY]) = cpu_to_be32(domains[j].handle);
 		iGot = tpm_command(0, cmdBuf, len,
 				gcaTpmResponse, sizeof(gcaTpmResponse), theMsg);
 		if (iGot == 10) {
@@ -369,6 +374,9 @@ void tpm_hierarchy_changeauth(uint8_t *cmdBuf, int len)
 
 void tpm_lib_dump_info(void)
 {
+	struct domain *domains;
+	int numOfDomains;
+
 	tpm_startup();
 	tpm_get_capabilities();
 	tpm_getcap_ptfixed();
@@ -376,10 +384,17 @@ void tpm_lib_dump_info(void)
 	tpm_pcr_extend();
 	tpm_pcr_read_all();
 #ifdef FIRSTTIME_RUN
-	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS,
-					sizeof(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS));
+	domains = domainsALL;
+	numOfDomains = 4;
+#else
+	domains = domainsALWAYS;
+	numOfDomains = 1;
 #endif
+	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS,
+					sizeof(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS),
+					"_INITIAL_", domains, numOfDomains);
 	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_ANYTIME,
-					sizeof(gcaTpm2HierarchyChangeAuth_ANYTIME));
+					sizeof(gcaTpm2HierarchyChangeAuth_ANYTIME),
+					"_ANYTIME_", domainsALL, 4);
 }
 

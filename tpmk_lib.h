@@ -10,6 +10,16 @@
 #define TPM_RH_ENDORSEMENT	0x4000000B
 #define TPM_RH_PLATFORM		0x4000000C
 
+struct domain {
+	uint32_t handle;
+	char *name;
+};
+
+extern struct domain domainsALL[4];
+extern struct domain domainsALWAYS[1];
+extern uint32_t domainsHandle[4];
+extern char* domainsName[4];
+
 int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int outSize, char *msg);
 void tpm_startup(void);
 void tpm_getcap_ptfixed(void);
@@ -21,7 +31,7 @@ void tpm_pcr_read_all(void);
 int tpm_print_tpm2b(uint8_t *buf, int iPos, char *msg);
 int tpm_print_tpms_auth_response(uint8_t *buf, int iPos);
 void tpm_pcr_extend(void);
-void tpm_hierarchy_changeauth(uint8_t *cmdBuf, int len);
+void tpm_hierarchy_changeauth(uint8_t *cmdBuf, int len, char *msgCmdType, struct domain *domains, int numOfDomains);
 void tpm_lib_dump_info(void);
 
 #endif
