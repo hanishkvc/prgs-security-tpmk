@@ -103,7 +103,7 @@ uint8_t gcaTpm2HierarchyChangeAuth_ANYTIME [0x45] = {
 	/* TPMI_RH_HIERARCHY_AUTH */
 	0x40, 0x00, 0x00, 0x01,		/* TPM_RH_OWNER */
 	// Size of Auth Structure
-	0x00, 0x00, 0x00, 0x09,		/* TPMS_AUTH_COMMAND Structure size */
+	0x00, 0x00, 0x00, 0x1d,		/* TPMS_AUTH_COMMAND Structure size */
 	/* TPMS_AUTH_COMMAND */
 	0x40, 0x00, 0x00, 0x09,		/* TPMI_SH_AUTH_SESSION=>TPM_RS_PW */
 	0x00, 0x00,			/* A empty TPM2B_NONCE */
