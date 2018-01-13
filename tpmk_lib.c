@@ -12,6 +12,13 @@ uint8_t gcaTpm2Startup [0x0c] = {
 	0x00, 0x00			/* TPM_SU_CLEAR */
 };
 
+uint8_t gcaTpm2Shutdown [0x0c] = {
+	0x80, 0x01,			/* TAG: TPM_ST_NO_SESSIONS */
+	0x00, 0x00, 0x00, 0x0c,		/* Size */
+	0x00, 0x00, 0x01, 0x45,		/* CommandCode: TPM_CC_Shutdown */
+	0x00, 0x00			/* TPM_SU_CLEAR */
+};
+
 uint8_t gcaTpm2ReadClock [0x0a] = {
 	0x80, 0x01,			/* TAG: TPM_ST_NO_SESSIONS */
 	0x00, 0x00, 0x00, 0x0a,		/* Size */
@@ -255,6 +262,12 @@ void tpm_startup(void)
 {
 	tpm_command(0, gcaTpm2Startup, sizeof(gcaTpm2Startup),
 			gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2Startup");
+}
+
+void tpm_shutdown(void)
+{
+	tpm_command(0, gcaTpm2Shutdown, sizeof(gcaTpm2Shutdown),
+			gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2Shutdown");
 }
 
 void tpm_readclock(void)

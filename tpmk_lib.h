@@ -28,6 +28,7 @@ int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int o
 void tpm_print_command_generic(uint8_t *buf, int len, int bDumpFullCommand, char *msg);
 void tpm_print_response_generic(uint8_t *outBuf, int iGot, int bDumpFullResponse, char *msg);
 void tpm_startup(void);
+void tpm_shutdown(void);
 void tpm_readclock(void);
 int tpm_getcap(uint8_t *inBuf, int inLen, uint8_t *outBuf, int outLen, char *msg);
 void tpm_getcap_ptfixed(void);
