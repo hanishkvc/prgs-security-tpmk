@@ -14,6 +14,7 @@ int gbMITpmDoInitAuths = 0;
 int gbMITpmDoVerifyAuths = 0;
 int gbMIDebugTpmWriteDumpFullCommand = 0;
 int gbMIDebugTpmReadDumpFullResponse = 0;
+int gbMITpmDoShutdown = 0;
 
 module_param(gbMITpmDoClear, int, 0);
 MODULE_PARM_DESC(gbMITpmDoClear, "\n 1 to clear a TPM \n 0 to disable TPM clearing \n default: 0");
@@ -25,6 +26,8 @@ module_param(gbMIDebugTpmWriteDumpFullCommand, int, 0);
 MODULE_PARM_DESC(gbMIDebugTpmWriteDumpFullCommand, "\n 0 disabled \n 1 to Dump the TPM Command buffer in dev_write \n default: 0");
 module_param(gbMIDebugTpmReadDumpFullResponse, int, 0);
 MODULE_PARM_DESC(gbMIDebugTpmReadDumpFullResponse, "\n 0 disabled \n 1 to Dump the TPM Response buffer in dev_read \n default: 0");
+module_param(gbMITpmDoShutdown, int, 0);
+MODULE_PARM_DESC(gbMITpmDoShutdown, "\n 1 to do a TPM Shutdown when unloading module \n 0 to avoid TPM shutdown during module unloading \n default: 0");
 
 int gbAlreadyOpen = 0;
 uint8_t gcaDrvTpmCmd[4096];
@@ -130,6 +133,12 @@ int tpm_init(void)
 		return -1;
 	tpm_dump_info();
 	return 0;
+}
+
+void tpm_cleanup(void)
+{
+	if (gbMITpmDoShutdown)
+		tpm_shutdown();
 }
 
 int tpm_send(int locality, uint8_t *buf, int len)
@@ -345,6 +354,7 @@ void cleanup_module(void)
 {
 	printk(KERN_INFO MODULE_NAME "In cleanup module\n");
 	unregister_chrdev(DEV_MAJOR, MODULE_NAME);
+	tpm_cleanup();
 	iounmap(gpBase);
 	release_mem_region(ADDR_BASE, ADDR_LEN);
 }
