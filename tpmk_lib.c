@@ -32,8 +32,8 @@ uint8_t gcaGetCap_TPM_PT_LOCKOUTPLUS [0x16] = {
 	0x00, 0x00, 0x00, 0x16,		/* Size */
 	0x00, 0x00, 0x01, 0x7a,		/* CommandCode: TPM_CC_GetCapability */
 	0x00, 0x00, 0x00, 0x06,		/* Capability: TPM_CAP_TPM_PROPERTIES */
-	0x00, 0x00, 0x02, 0x14,		/* Property: TPM_PT_LOCKOUT_COUNTER */
-	0x00, 0x00, 0x00, 0x08		/* Property Count */
+	0x00, 0x00, 0x02, 0x15,		/* Property: TPM_PT_LOCKOUT_COUNTER */
+	0x00, 0x00, 0x00, 0x04		/* Property Count */
 };
 
 uint8_t gcaGetCap_TPM_PT_MANUFACTURER [0x16] = {
@@ -432,6 +432,7 @@ void tpm_lib_dump_info(void)
 	int numOfDomains;
 
 	tpm_startup();
+	tpm_getcap_lockoutplus();
 	tpm_get_capabilities();
 	tpm_getcap_ptfixed();
 	tpm_readclock();
