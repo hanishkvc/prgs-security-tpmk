@@ -40,7 +40,8 @@
 
 extern int gCurLocality;
 extern int gbMITpmDoClear;
-extern int gbMITpmDoInitAllAuths;
+extern int gbMITpmDoInitAuths;
+extern int gbMITpmDoVerifyAuths;
 
 #define MAXWAITCNT_REQUESTLOCALITY 40
 #define MAXWAITCNT_FORCMDREADY 40

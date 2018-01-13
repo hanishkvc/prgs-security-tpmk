@@ -10,13 +10,15 @@ void *gpGPIOMemBase, *gpILBBase;
 
 int gCurLocality = 0;
 int gbMITpmDoClear = 0;
-int gbMITpmDoInitAllAuths = 0;
-
+int gbMITpmDoInitAuths = 0;
+int gbMITpmDoVerifyAuths = 0;
 
 module_param(gbMITpmDoClear, int, 0);
-MODULE_PARM_DESC(gbMITpmDoClear, "Enable to clear a TPM");
-module_param(gbMITpmDoInitAllAuths, int, 0);
-MODULE_PARM_DESC(gbMITpmDoInitAllAuths, "Enable for a new TPM or after TPMClear");
+MODULE_PARM_DESC(gbMITpmDoClear, "\n 1 to clear a TPM \n 0 to disable TPM clearing \n default: 0");
+module_param(gbMITpmDoInitAuths, int, 0);
+MODULE_PARM_DESC(gbMITpmDoInitAuths, "\n 0 to bypass Auth Initing \n 1 to init PlatformAuth only \n 4 or More to init All Auths, reqd for a new TPM or after TPMClear \n default: 0");
+module_param(gbMITpmDoVerifyAuths, int, 0);
+MODULE_PARM_DESC(gbMITpmDoVerifyAuths, "\n 0 to bypass Auth Verifying \n 1 to verify All Auths \n default: 0");
 
 int gbAlreadyOpen = 0;
 uint8_t gcaDrvTpmCmd[4096];

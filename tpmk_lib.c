@@ -165,8 +165,6 @@ uint64_t gCurRunTime, gTotalRunTime;
 struct domain domainsALL[4] = { {TPM_RH_PLATFORM, "Platform" }, {TPM_RH_OWNER, "Owner" },
 				{TPM_RH_ENDORSEMENT, "Endorsement"}, {TPM_RH_LOCKOUT, "LockOut"} };
 struct domain domainsALWAYS[1] = { {TPM_RH_PLATFORM, "Platform" } };
-uint32_t domainsHandle[4] = { TPM_RH_OWNER, TPM_RH_LOCKOUT, TPM_RH_ENDORSEMENT, TPM_RH_PLATFORM };
-char* domainsName[4] = { "Owner", "Lockout", "Endorsement", "Platform" };
 
 
 int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int outSize, char *msg)
@@ -486,19 +484,18 @@ void tpm_lib_dump_info(void)
 	if (gbMITpmDoClear) {
 		tpm_command(0, gcaTpm2Clear, sizeof(gcaTpm2Clear), gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2Clear_Platform");
 	}
-	if (gbMITpmDoInitAllAuths) {
-		domains = domainsALL;
+	domains = domainsALL;
+	numOfDomains = gbMITpmDoInitAuths;
+	if (numOfDomains > 4)
 		numOfDomains = 4;
-	} else {
-		domains = domainsALWAYS;
-		numOfDomains = 1;
-	}
 	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS,
 					sizeof(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS),
 					"_INITIAL_", domains, numOfDomains);
-	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_ANYTIME,
+	if (gbMITpmDoVerifyAuths) {
+		tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_ANYTIME,
 					sizeof(gcaTpm2HierarchyChangeAuth_ANYTIME),
 					"_ANYTIME_", domainsALL, 4);
+	}
 	tpm_getcap_lockoutplus();
 }
 
