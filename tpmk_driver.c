@@ -296,15 +296,18 @@ static ssize_t dev_write(struct file *filp, const char *buf, size_t len, loff_t 
 	return len;
 }
 
-struct file_operations fops = {
+struct file_operations myFops = {
 	.read = dev_read,
 	.write = dev_write,
 	.open = dev_open,
 	.release = dev_release
 };
 
+struct cdev myCdev;
+
 int init_module(void)
 {
+	int devNum = MKDEV(200, 200);
 	printk(KERN_INFO MODULE_NAME MODULE_MY_VERSION " In init_module\n");
 	gpMyAdda = request_mem_region(ADDR_BASE, ADDR_LEN, MODULE_NAME);
 	if (gpMyAdda == NULL) {
@@ -320,12 +323,18 @@ int init_module(void)
 	}
 	pciconf_init();
 	sys_init();
-	return tpm_init();
+	tpm_init();
+	cdev_init(&myCdev, &myFops);
+	myCdev.owner = THIS_MODULE;
+	myCdev.ops = &myFops;
+	cdev_add(&myCdev, devNum, 1);
+	return 0;
 }
 
 void cleanup_module(void)
 {
 	printk(KERN_INFO MODULE_NAME "In cleanup module\n");
+	cdev_del(&myCdev);
 	iounmap(gpBase);
 	release_mem_region(ADDR_BASE, ADDR_LEN);
 }
