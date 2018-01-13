@@ -167,15 +167,25 @@ struct domain domainsALWAYS[1] = { {TPM_RH_PLATFORM, "Platform" } };
 uint32_t domainsHandle[4] = { TPM_RH_OWNER, TPM_RH_LOCKOUT, TPM_RH_ENDORSEMENT, TPM_RH_PLATFORM };
 char* domainsName[4] = { "Owner", "Lockout", "Endorsement", "Platform" };
 
+
 int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int outSize, char *msg)
 {
-	int i, iGot;
-	uint32_t respCode;
-	uint32_t respCode_11_08;
+	int iGot;
 
 	printk(KERN_INFO MODULE_NAME "command:%s: Input buffer size %d, Output buffer size %d\n", msg, inSize, outSize);
 	tpm_send(locality, inBuf, inSize);
 	iGot = tpm_recv(0, outBuf, outSize);
+	tpm_print_response_generic(outBuf, iGot, gbDebug_TpmCommandDumpFullResponse, msg);
+	printk(KERN_INFO MODULE_NAME "command: done\n");
+	return iGot;
+}
+
+void tpm_print_response_generic(uint8_t *outBuf, int iGot, int bDumpFullResponse, char *msg)
+{
+	int i;
+	uint32_t respCode;
+	uint32_t respCode_11_08;
+
 	printk("ResponseTag : 0x%.4x\n", be16_to_cpup((__be16*)outBuf));
 	printk("ResponseSize: 0x%.8x\n", be32_to_cpup((__be32*)&outBuf[2]));
 	respCode = be32_to_cpup((__be32*)&outBuf[6]);
@@ -219,13 +229,11 @@ int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int o
 			printk("INFO: Error [0x%x]\n", respCode & 0x7f);
 		}
 	}
-	if (gbDebug_TpmCommandDumpFullResponse == 1) {
+	if (bDumpFullResponse == 1) {
 		for(i = 10; i < iGot; i++) {
 			printk("%.4d=0x%.2x [%c], ", i, outBuf[i], outBuf[i]);
 		}
 	}
-	printk(KERN_INFO MODULE_NAME "command: done\n");
-	return iGot;
 }
 
 void tpm_startup(void)
