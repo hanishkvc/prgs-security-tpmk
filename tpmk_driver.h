@@ -42,6 +42,8 @@ extern int gCurLocality;
 extern int gbMITpmDoClear;
 extern int gbMITpmDoInitAuths;
 extern int gbMITpmDoVerifyAuths;
+extern int gbMIDebugTpmWriteDumpFullCommand;
+extern int gbMIDebugTpmReadDumpFullResponse;
 
 #define MAXWAITCNT_REQUESTLOCALITY 40
 #define MAXWAITCNT_FORCMDREADY 40

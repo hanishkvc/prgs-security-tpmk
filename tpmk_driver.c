@@ -12,6 +12,8 @@ int gCurLocality = 0;
 int gbMITpmDoClear = 0;
 int gbMITpmDoInitAuths = 0;
 int gbMITpmDoVerifyAuths = 0;
+int gbMIDebugTpmWriteDumpFullCommand = 0;
+int gbMIDebugTpmReadDumpFullResponse = 0;
 
 module_param(gbMITpmDoClear, int, 0);
 MODULE_PARM_DESC(gbMITpmDoClear, "\n 1 to clear a TPM \n 0 to disable TPM clearing \n default: 0");
@@ -19,6 +21,10 @@ module_param(gbMITpmDoInitAuths, int, 0);
 MODULE_PARM_DESC(gbMITpmDoInitAuths, "\n 0 to bypass Auth Initing \n 1 to init PlatformAuth only \n 4 or More to init All Auths, reqd for a new TPM or after TPMClear \n default: 0");
 module_param(gbMITpmDoVerifyAuths, int, 0);
 MODULE_PARM_DESC(gbMITpmDoVerifyAuths, "\n 0 to bypass Auth Verifying \n 1 to verify All Auths \n default: 0");
+module_param(gbMIDebugTpmWriteDumpFullCommand, int, 0);
+MODULE_PARM_DESC(gbMIDebugTpmWriteDumpFullCommand, "\n 0 disabled \n 1 to Dump the TPM Command buffer in dev_write \n default: 0");
+module_param(gbMIDebugTpmReadDumpFullResponse, int, 0);
+MODULE_PARM_DESC(gbMIDebugTpmReadDumpFullResponse, "\n 0 disabled \n 1 to Dump the TPM Response buffer in dev_read \n default: 0");
 
 int gbAlreadyOpen = 0;
 uint8_t gcaDrvTpmCmd[4096];
@@ -278,7 +284,7 @@ static ssize_t dev_read(struct file *filp, char *buf, size_t len, loff_t *offset
 	int iGot;
 
 	iGot = tpm_recv(0, bufResp, bufRespLen);
-	tpm_print_response_generic(bufResp, iGot, gbDebug_TpmCommandDumpFullResponse, "TPMDrvRead");
+	tpm_print_response_generic(bufResp, iGot, gbMIDebugTpmReadDumpFullResponse, "TPMDrvRead");
 	if (copy_to_user(buf, bufResp, iGot) != 0) {
 		return -EFAULT;
 	}
@@ -297,7 +303,7 @@ static ssize_t dev_write(struct file *filp, const char *buf, size_t len, loff_t 
 	if (copy_from_user(bufCmd, buf, len) != 0) {
 		return -EFAULT;
 	}
-	tpm_print_command_generic(bufCmd, len, gbDebug_TpmCommandDumpFullCommand, "TPMDrvWrite");
+	tpm_print_command_generic(bufCmd, len, gbMIDebugTpmWriteDumpFullCommand, "TPMDrvWrite");
 	//locality = *offset;
 	tpm_send(locality, bufCmd, len);
 	return len;
