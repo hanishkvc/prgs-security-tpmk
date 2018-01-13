@@ -18,6 +18,9 @@ MODULE_PARM_DESC(gbMITpmDoClear, "Enable to clear a TPM");
 module_param(gbMITpmDoInitAllAuths, int, 0);
 MODULE_PARM_DESC(gbMITpmDoInitAllAuths, "Enable for a new TPM or after TPMClear");
 
+int gbAlreadyOpen = 0;
+uint8_t gcaDrvTpmCmd[4096];
+uint8_t gcaDrvTpmResponse[4096];
 
 void tpm_dump_info(void)
 {
@@ -242,6 +245,63 @@ int tpm_recv(int locality, uint8_t *buf, int len)
 	}
 	return totalSize;
 }
+
+
+static int dev_open(struct inode *inode, struct file *file)
+{
+	if (gbAlreadyOpen)
+		return -EBUSY;
+
+	gbAlreadyOpen = 1;
+	try_module_get(THIS_MODULE);
+	return 0;
+}
+
+static int dev_release(struct inode *inode, struct file *file)
+{
+	gbAlreadyOpen = 0;
+	module_put(THIS_MODULE);
+	return 0;
+}
+
+static ssize_t dev_read(struct file *filp, char *buf, size_t len, loff_t *offset)
+{
+	char *bufResp = gcaDrvTpmResponse;
+	int bufRespLen = 4096;
+	int iGot;
+
+	iGot = tpm_recv(0, bufResp, bufRespLen);
+	tpm_print_response_generic(bufResp, iGot, gbDebug_TpmCommandDumpFullResponse, "TPMDrvRead");
+	if (copy_to_user(buf, bufResp, iGot) != 0) {
+		return -EFAULT;
+	}
+	return iGot;
+}
+
+static ssize_t dev_write(struct file *filp, const char *buf, size_t len, loff_t *offset)
+{
+	char *bufCmd = gcaDrvTpmCmd;
+	int bufCmdLen = 4096;
+	int locality = 0;
+
+	if (len > bufCmdLen) {
+		return -EFAULT;
+	}
+	if (copy_from_user(bufCmd, buf, len) != 0) {
+		return -EFAULT;
+	}
+	//tpm_print_cmd_generic(bufCmd, len, gbDebug_TpmCommandDumpFullCmd, "TPMDrvWrite");
+	//locality = *offset;
+	tpm_send(locality, bufCmd, len);
+	return len;
+}
+
+struct file_operations fops = {
+	.read = dev_read,
+	.write = dev_write,
+	.open = dev_open,
+	.release = dev_release
+};
 
 int init_module(void)
 {
