@@ -11,6 +11,7 @@
 #define TPM_RH_PLATFORM		0x4000000C
 
 extern uint64_t gCurRunTime, gTotalRunTime;
+extern int gbDebug_TpmCommandDumpFullCommand;
 extern int gbDebug_TpmCommandDumpFullResponse;
 
 struct domain {
@@ -24,6 +25,7 @@ extern uint32_t domainsHandle[4];
 extern char* domainsName[4];
 
 int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int outSize, char *msg);
+void tpm_print_command_generic(uint8_t *buf, int len, int bDumpFullCommand, char *msg);
 void tpm_print_response_generic(uint8_t *outBuf, int iGot, int bDumpFullResponse, char *msg);
 void tpm_startup(void);
 void tpm_readclock(void);

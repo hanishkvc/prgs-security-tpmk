@@ -295,7 +295,7 @@ static ssize_t dev_write(struct file *filp, const char *buf, size_t len, loff_t 
 	if (copy_from_user(bufCmd, buf, len) != 0) {
 		return -EFAULT;
 	}
-	//tpm_print_cmd_generic(bufCmd, len, gbDebug_TpmCommandDumpFullCmd, "TPMDrvWrite");
+	tpm_print_command_generic(bufCmd, len, gbDebug_TpmCommandDumpFullCommand, "TPMDrvWrite");
 	//locality = *offset;
 	tpm_send(locality, bufCmd, len);
 	return len;

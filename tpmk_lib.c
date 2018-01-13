@@ -157,6 +157,7 @@ uint8_t gcaTpm2Clear [0x2f] = {
 
 
 uint8_t gcaTpmResponse[4096];
+int gbDebug_TpmCommandDumpFullCommand = 0;
 int gbDebug_TpmCommandDumpFullResponse = 0;
 
 uint64_t gCurRunTime, gTotalRunTime;
@@ -178,6 +179,22 @@ int tpm_command(int locality, uint8_t *inBuf, int inSize, uint8_t *outBuf, int o
 	tpm_print_response_generic(outBuf, iGot, gbDebug_TpmCommandDumpFullResponse, msg);
 	printk(KERN_INFO MODULE_NAME "command: done\n");
 	return iGot;
+}
+
+void tpm_print_command_generic(uint8_t *buf, int len, int bDumpFullCommand, char *msg)
+{
+	int i;
+	uint32_t cmdCode;
+
+	printk("CmdTag : 0x%.4x\n", be16_to_cpup((__be16*)buf));
+	printk("CmdSize: 0x%.8x\n", be32_to_cpup((__be32*)&buf[2]));
+	cmdCode = be32_to_cpup((__be32*)&buf[6]);
+	printk("CmdCode: 0x%.8x\n", cmdCode);
+	if (bDumpFullCommand == 1) {
+		for(i = 10; i < len; i++) {
+			printk("%.4d=0x%.2x [%c], ", i, buf[i], buf[i]);
+		}
+	}
 }
 
 void tpm_print_response_generic(uint8_t *outBuf, int iGot, int bDumpFullResponse, char *msg)
