@@ -27,6 +27,15 @@ uint8_t gcaGetCap_TPM_PT_FIXED [0x16] = {
 	0x00, 0x00, 0x00, 0x45		/* Property Count */
 };
 
+uint8_t gcaGetCap_TPM_PT_LOCKOUTPLUS [0x16] = {
+	0x80, 0x01,			/* TPM_ST_NO_SESSIONS */
+	0x00, 0x00, 0x00, 0x16,		/* Size */
+	0x00, 0x00, 0x01, 0x7a,		/* CommandCode: TPM_CC_GetCapability */
+	0x00, 0x00, 0x00, 0x06,		/* Capability: TPM_CAP_TPM_PROPERTIES */
+	0x00, 0x00, 0x02, 0x14,		/* Property: TPM_PT_LOCKOUT_COUNTER */
+	0x00, 0x00, 0x00, 0x08		/* Property Count */
+};
+
 uint8_t gcaGetCap_TPM_PT_MANUFACTURER [0x16] = {
 	0x80, 0x01,			/* TPM_ST_NO_SESSIONS */
 	0x00, 0x00, 0x00, 0x16,		/* Size */
@@ -229,16 +238,30 @@ void tpm_readclock(void)
 	}
 }
 
-void tpm_getcap_ptfixed(void)
+int tpm_getcap(uint8_t *inBuf, int inLen, uint8_t *outBuf, int outLen, char *msg)
 {
 	int i, iGot;
 
-	iGot = tpm_command(0, gcaGetCap_TPM_PT_FIXED, sizeof(gcaGetCap_TPM_PT_FIXED),
-			gcaTpmResponse, sizeof(gcaTpmResponse), "GetCap_PTFIXED All");
+	iGot = tpm_command(0, inBuf, inLen, outBuf, outLen, msg);
 	printk("moreData:0x%x\n", gcaTpmResponse[10]);
 	for(i = 11; i < iGot; i+=8) {
 		printk("0x%.8x : 0x%.8x\n", be32_to_cpup((__be32*)&gcaTpmResponse[i]), be32_to_cpup((__be32*)&gcaTpmResponse[i+4]));
 	}
+	return iGot;
+}
+
+void tpm_getcap_ptfixed(void)
+{
+	int iGot;
+	iGot = tpm_getcap(gcaGetCap_TPM_PT_FIXED, sizeof(gcaGetCap_TPM_PT_FIXED),
+			gcaTpmResponse, sizeof(gcaTpmResponse), "GetCap_PTFIXED All");
+}
+
+void tpm_getcap_lockoutplus(void)
+{
+	int iGot;
+	iGot = tpm_getcap(gcaGetCap_TPM_PT_LOCKOUTPLUS, sizeof(gcaGetCap_TPM_PT_LOCKOUTPLUS),
+			gcaTpmResponse, sizeof(gcaTpmResponse), "GetCap_PTLockOutPlus");
 }
 
 void tpm_get_capabilities(void)
@@ -428,5 +451,6 @@ void tpm_lib_dump_info(void)
 	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_ANYTIME,
 					sizeof(gcaTpm2HierarchyChangeAuth_ANYTIME),
 					"_ANYTIME_", domainsALL, 4);
+	tpm_getcap_lockoutplus();
 }
 
