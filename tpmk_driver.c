@@ -9,6 +9,15 @@ void *gpBase;
 void *gpGPIOMemBase, *gpILBBase;
 
 int gCurLocality = 0;
+int gbMITpmDoClear = 0;
+int gbMITpmDoInitAllAuths = 0;
+
+
+module_param(gbMITpmDoClear, int, 0);
+MODULE_PARM_DESC(gbMITpmDoClear, "Enable to clear a TPM");
+module_param(gbMITpmDoInitAllAuths, int, 0);
+MODULE_PARM_DESC(gbMITpmDoInitAllAuths, "Enable for a new TPM or after TPMClear");
+
 
 void tpm_dump_info(void)
 {

@@ -8,6 +8,7 @@
 #include <linux/ioport.h>
 #include <linux/delay.h>
 #include <asm/byteorder.h>
+#include <linux/moduleparam.h>
 #include "pciconf.h"
 
 #define MODULE_NAME ":tpmk:"
@@ -34,6 +35,8 @@
 #define STATUS_START		0x20
 
 extern int gCurLocality;
+extern int gbMITpmDoClear;
+extern int gbMITpmDoInitAllAuths;
 
 #define MAXWAITCNT_REQUESTLOCALITY 40
 #define MAXWAITCNT_FORCMDREADY 40

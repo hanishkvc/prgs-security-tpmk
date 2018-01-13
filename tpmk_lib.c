@@ -458,14 +458,16 @@ void tpm_lib_dump_info(void)
 	tpm_pcr_read_all();
 	tpm_pcr_extend();
 	tpm_pcr_read_all();
-	//tpm_command(0, gcaTpm2Clear, sizeof(gcaTpm2Clear), gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2Clear_Platform");
-#ifdef FIRSTTIME_RUN
-	domains = domainsALL;
-	numOfDomains = 4;
-#else
-	domains = domainsALWAYS;
-	numOfDomains = 1;
-#endif
+	if (gbMITpmDoClear) {
+		tpm_command(0, gcaTpm2Clear, sizeof(gcaTpm2Clear), gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2Clear_Platform");
+	}
+	if (gbMITpmDoInitAllAuths) {
+		domains = domainsALL;
+		numOfDomains = 4;
+	} else {
+		domains = domainsALWAYS;
+		numOfDomains = 1;
+	}
 	tpm_hierarchy_changeauth(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS,
 					sizeof(gcaTpm2HierarchyChangeAuth_INITIAL_DEFAULTOWNERPASS),
 					"_INITIAL_", domains, numOfDomains);
