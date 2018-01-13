@@ -14,8 +14,9 @@
 #include <linux/cdev.h>
 #include "pciconf.h"
 
-#define MODULE_NAME ":tpmk:"
-#define MODULE_MY_VERSION "v20180107_0816"
+#define DEV_MAJOR 200
+#define MODULE_NAME "tpmk"
+#define MODULE_MY_VERSION "v20180113_2006"
 
 #define ADDR_BASE 0xFED40000L
 #define ADDR_LEN 0x5000

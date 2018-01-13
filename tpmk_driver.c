@@ -249,8 +249,12 @@ int tpm_recv(int locality, uint8_t *buf, int len)
 
 static int dev_open(struct inode *inode, struct file *file)
 {
-	if (gbAlreadyOpen)
+	if (gbAlreadyOpen) {
+		printk(KERN_ALERT MODULE_NAME ":Already open\n");
 		return -EBUSY;
+	} else {
+		printk(KERN_INFO MODULE_NAME ":opened\n");
+	}
 
 	gbAlreadyOpen = 1;
 	try_module_get(THIS_MODULE);
@@ -261,6 +265,7 @@ static int dev_release(struct inode *inode, struct file *file)
 {
 	gbAlreadyOpen = 0;
 	module_put(THIS_MODULE);
+	printk(KERN_INFO MODULE_NAME ":closed\n");
 	return 0;
 }
 
@@ -296,19 +301,20 @@ static ssize_t dev_write(struct file *filp, const char *buf, size_t len, loff_t 
 	return len;
 }
 
-struct file_operations myFops = {
+struct file_operations fops = {
 	.read = dev_read,
 	.write = dev_write,
 	.open = dev_open,
 	.release = dev_release
 };
 
-struct cdev myCdev;
-
 int init_module(void)
 {
-	int devNum = MKDEV(200, 200);
 	printk(KERN_INFO MODULE_NAME MODULE_MY_VERSION " In init_module\n");
+	if (register_chrdev(DEV_MAJOR, MODULE_NAME, &fops) != 0) {
+		printk(KERN_ALERT MODULE_NAME "ERROR: Couldnt get chr major %d\n", DEV_MAJOR);
+		return -EIO;
+	}
 	gpMyAdda = request_mem_region(ADDR_BASE, ADDR_LEN, MODULE_NAME);
 	if (gpMyAdda == NULL) {
 		printk(KERN_ALERT MODULE_NAME "Oops, I didnt get my adda\n");
@@ -324,18 +330,15 @@ int init_module(void)
 	pciconf_init();
 	sys_init();
 	tpm_init();
-	cdev_init(&myCdev, &myFops);
-	myCdev.owner = THIS_MODULE;
-	myCdev.ops = &myFops;
-	cdev_add(&myCdev, devNum, 1);
 	return 0;
 }
 
 void cleanup_module(void)
 {
 	printk(KERN_INFO MODULE_NAME "In cleanup module\n");
-	cdev_del(&myCdev);
+	unregister_chrdev(DEV_MAJOR, MODULE_NAME);
 	iounmap(gpBase);
 	release_mem_region(ADDR_BASE, ADDR_LEN);
 }
 
+MODULE_ALIAS_CHARDEV_MAJOR(DEV_MAJOR);
