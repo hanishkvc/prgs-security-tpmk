@@ -141,7 +141,7 @@ uint8_t gcaTpm2Clear [0x2f] = {
 	0x00, 0x00, 0x00, 0x2f,		/* Size */
 	0x00, 0x00, 0x01, 0x26,		/* CommandCode: TPM_CC_Clear */
 	/* TPMI_RH_CLEAR */
-	0x40, 0x00, 0x00, 0x0A,		/* TPM_RH_LOCKOUT */
+	0x40, 0x00, 0x00, 0x0C,		/* TPM_RH_PLATFORM */
 	// Size of Auth Structure
 	0x00, 0x00, 0x00, 0x1d,		/* TPMS_AUTH_COMMAND Structure size */
 	/* TPMS_AUTH_COMMAND */
@@ -458,7 +458,7 @@ void tpm_lib_dump_info(void)
 	tpm_pcr_read_all();
 	tpm_pcr_extend();
 	tpm_pcr_read_all();
-	tpm_command(0, gcaTpm2Clear, sizeof(gcaTpm2Clear), gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2Clear_Lockout");
+	//tpm_command(0, gcaTpm2Clear, sizeof(gcaTpm2Clear), gcaTpmResponse, sizeof(gcaTpmResponse), "Tpm2Clear_Platform");
 #ifdef FIRSTTIME_RUN
 	domains = domainsALL;
 	numOfDomains = 4;
